@@ -1,4 +1,5 @@
 export type RootStackParamList = {
+  Login: undefined;
   Dashboard: undefined;
   LearningPath: undefined;
   /** Lista de teoria (mesmo nível da Trilha). */

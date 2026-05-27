@@ -1,84 +1,258 @@
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
-  View,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  StatusBar,
+  View,
 } from "react-native";
-import { Image } from "react-native";
-import Logo from "../../assets/mathning_sem_fundo.png";
+import { useAuthContext } from "../context/AuthContext";
+
+const Logo = require("../../assets/mathning_sem_fundo.png");
+
+type AuthMode = "signIn" | "signUp";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [mode, setMode] = useState<AuthMode>("signIn");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const { demo, signIn, signUp, resetPassword, continueDemo } =
+    useAuthContext();
+
+  const isSignUp = mode === "signUp";
+
+  async function handleSubmit() {
+    const cleanEmail = email.trim();
+    setFormError(null);
+    setInfo(null);
+
+    if (demo) {
+      setFormError("Configure o Firebase em apps/.env para usar login real.");
+      return;
+    }
+
+    if (!cleanEmail || !senha) {
+      setFormError("Preencha email e senha para continuar.");
+      return;
+    }
+
+    if (isSignUp && senha.length < 6) {
+      setFormError("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      if (isSignUp) {
+        await signUp(cleanEmail, senha);
+      } else {
+        await signIn(cleanEmail, senha);
+      }
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : "Nao foi possivel entrar.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handlePasswordReset() {
+    const cleanEmail = email.trim();
+    setFormError(null);
+    setInfo(null);
+
+    if (demo) {
+      setFormError("Configure o Firebase em apps/.env para recuperar senha.");
+      return;
+    }
+
+    if (!cleanEmail) {
+      setFormError("Digite seu email para recuperar a senha.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await resetPassword(cleanEmail);
+      setInfo("Enviamos um email com instrucoes para redefinir sua senha.");
+    } catch (e) {
+      setFormError(
+        e instanceof Error ? e.message : "Nao foi possivel recuperar a senha.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function toggleMode() {
+    setMode(isSignUp ? "signIn" : "signUp");
+    setFormError(null);
+    setInfo(null);
+  }
+
+  async function handleContinueDemo() {
+    setFormError(null);
+    setInfo(null);
+    setSubmitting(true);
+    try {
+      await continueDemo();
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F6FA" />
-
-      <View style={styles.content}>
-        {/* Topo */}
-        <View style={styles.header}>
+      <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND} />
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
             <Image source={Logo} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.title}>Bem-vindo ao Mathning</Text>
-          <Text style={styles.subtitle}>
-            Faça login para continuar aprendendo matemática de forma leve e prática.
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Entrar</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>E-mail</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Digite seu e-mail"
-              placeholderTextColor="#9CA3AF"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+            <Text style={styles.title}>Bem-vindo ao Mathning</Text>
+            <Text style={styles.subtitle}>
+              Entre para continuar sua trilha e salvar seu progresso no Firebase.
+            </Text>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Senha</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Digite sua senha"
-              placeholderTextColor="#9CA3AF"
-              value={senha}
-              onChangeText={setSenha}
-              secureTextEntry
-            />
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>
+              {isSignUp ? "Criar conta" : "Entrar"}
+            </Text>
+
+            {demo ? (
+              <View style={styles.messageInfo}>
+                <Text style={styles.messageInfoText}>
+                  Firebase ainda nao configurado. Preencha apps/.env para usar
+                  login real ou continue em demonstracao.
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Digite seu email"
+                placeholderTextColor="#9CA3AF"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                textContentType="emailAddress"
+                editable={!submitting}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Senha</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Digite sua senha"
+                placeholderTextColor="#9CA3AF"
+                value={senha}
+                onChangeText={setSenha}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType={isSignUp ? "newPassword" : "password"}
+                editable={!submitting}
+                onSubmitEditing={() => void handleSubmit()}
+              />
+            </View>
+
+            {formError ? (
+              <View style={styles.messageError}>
+                <Text style={styles.messageErrorText}>{formError}</Text>
+              </View>
+            ) : null}
+
+            {info ? (
+              <View style={styles.messageInfo}>
+                <Text style={styles.messageInfoText}>{info}</Text>
+              </View>
+            ) : null}
+
+            {!isSignUp && (
+              <TouchableOpacity
+                style={styles.forgotButton}
+                onPress={() => void handlePasswordReset()}
+                disabled={submitting}
+                accessibilityRole="button"
+              >
+                <Text style={styles.forgotText}>Esqueci minha senha</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                submitting && styles.disabledButton,
+              ]}
+              onPress={() => void handleSubmit()}
+              disabled={submitting}
+              accessibilityRole="button"
+            >
+              {submitting ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.loginButtonText}>
+                  {isSignUp ? "Criar conta" : "Entrar"}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {demo ? (
+              <TouchableOpacity
+                style={styles.demoButton}
+                onPress={() => void handleContinueDemo()}
+                disabled={submitting}
+                accessibilityRole="button"
+              >
+                <Text style={styles.demoButtonText}>
+                  Continuar em demonstracao
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
-          <TouchableOpacity style={styles.forgotButton}>
-            <Text style={styles.forgotText}>Esqueci minha senha</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.loginButton}>
-            <Text style={styles.loginButtonText}>Entrar</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Ainda não tem conta?</Text>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}> Criar conta</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              {isSignUp ? "Ja tem conta?" : "Ainda nao tem conta?"}
+            </Text>
+            <TouchableOpacity
+              onPress={toggleMode}
+              disabled={submitting}
+              accessibilityRole="button"
+            >
+              <Text style={styles.footerLink}>
+                {isSignUp ? " Entrar" : " Criar conta"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const PRIMARY = "#5B4CF0";
-const PRIMARY_LIGHT = "#E9E5FF";
 const BACKGROUND = "#F5F6FA";
 const CARD = "#FFFFFF";
 const TEXT = "#1F2937";
@@ -91,9 +265,14 @@ const styles = StyleSheet.create({
     backgroundColor: BACKGROUND,
   },
 
-  content: {
+  keyboard: {
     flex: 1,
+  },
+
+  content: {
+    flexGrow: 1,
     paddingHorizontal: 24,
+    paddingVertical: 28,
     justifyContent: "center",
   },
 
@@ -103,15 +282,9 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-  width: 300,
-  height: 120,
-  marginBottom: 20,
-},
-
-  logoText: {
-    fontSize: 34,
-    fontWeight: "bold",
-    color: PRIMARY,
+    width: 300,
+    height: 120,
+    marginBottom: 20,
   },
 
   title: {
@@ -172,6 +345,36 @@ const styles = StyleSheet.create({
     color: TEXT,
   },
 
+  messageError: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#FCA5A5",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+
+  messageErrorText: {
+    color: "#991B1B",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+
+  messageInfo: {
+    backgroundColor: "#E0F2FE",
+    borderColor: "#7DD3FC",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+
+  messageInfoText: {
+    color: "#0369A1",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+
   forgotButton: {
     alignSelf: "center",
     marginBottom: 20,
@@ -192,9 +395,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  disabledButton: {
+    opacity: 0.72,
+  },
+
   loginButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
+    fontWeight: "700",
+  },
+
+  demoButton: {
+    height: 52,
+    borderWidth: 1,
+    borderColor: PRIMARY,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 12,
+    backgroundColor: "#FFFFFF",
+  },
+
+  demoButtonText: {
+    color: PRIMARY,
+    fontSize: 15,
     fontWeight: "700",
   },
 

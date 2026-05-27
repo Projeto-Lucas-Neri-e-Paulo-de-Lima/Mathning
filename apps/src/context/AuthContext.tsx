@@ -9,6 +9,11 @@ export interface AuthContextValue {
   loading: boolean;
   error: string | null;
   demo: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  signOutUser: () => Promise<void>;
+  continueDemo: () => Promise<void>;
   refreshProgress: () => Promise<void>;
   updateLocalDemo: (next: UserProgressDoc) => Promise<void>;
   db: Firestore | null;

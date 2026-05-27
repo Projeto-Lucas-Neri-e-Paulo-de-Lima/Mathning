@@ -39,22 +39,33 @@ const cardShadow = Platform.select({
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   useAppHeader(navigation, "Mathning");
-  const { progress, loading, error, demo } = useAuthContext();
+  const { progress, loading, error, demo, signOutUser } = useAuthContext();
   const [showDemoBanner, setShowDemoBanner] = useState(true);
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <View style={styles.errorCard}>
+          <Ionicons name="warning-outline" size={28} color={colors.error} />
+          <Text style={styles.errorTitle}>Erro ao carregar progresso</Text>
+          <Text style={styles.err}>{error}</Text>
+          <Pressable
+            style={styles.secondaryBtn}
+            onPress={() => void signOutUser()}
+            accessibilityRole="button"
+          >
+            <Text style={styles.secondaryBtnTxt}>Voltar ao login</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   if (loading || !progress) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.muted}>Carregando…</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.err}>{error}</Text>
+        <Text style={styles.muted}>Carregando...</Text>
       </View>
     );
   }
@@ -82,6 +93,20 @@ export function DashboardScreen() {
   return (
     <View style={styles.shell}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        {!demo && (
+          <View style={styles.logoutRow}>
+            <Pressable
+              style={styles.logoutBtn}
+              onPress={() => void signOutUser()}
+              accessibilityRole="button"
+              accessibilityLabel="Sair da conta"
+            >
+              <Ionicons name="log-out-outline" size={18} color={colors.primary} />
+              <Text style={styles.logoutTxt}>Sair</Text>
+            </Pressable>
+          </View>
+        )}
+
         {demo && showDemoBanner && (
           <View style={styles.banner}>
             <Ionicons name="warning-outline" size={22} color={colors.warning} />
@@ -216,6 +241,25 @@ const styles = StyleSheet.create({
   shell: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 20, paddingBottom: 32, gap: 14 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 8 },
+  logoutRow: {
+    alignItems: "flex-end",
+  },
+  logoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: colors.card,
+  },
+  logoutTxt: {
+    color: colors.primary,
+    fontWeight: "700",
+    fontSize: 13,
+  },
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.card,
@@ -346,5 +390,35 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   rateVal: { fontSize: 16, fontWeight: "700", color: colors.primary },
-  err: { color: colors.error },
+  errorCard: {
+    width: "88%",
+    maxWidth: 460,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.errorBg,
+    padding: 20,
+    alignItems: "center",
+    gap: 10,
+  },
+  errorTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  err: { color: colors.error, textAlign: "center", lineHeight: 20 },
+  secondaryBtn: {
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.btn,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  secondaryBtnTxt: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
 });
