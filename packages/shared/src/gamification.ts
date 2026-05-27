@@ -27,3 +27,6 @@ export function xpForCorrectAnswer(streakInSession: number): number {
 
 /** Meta diária simples: quantidade de exercícios */
 export const DAILY_GOAL_EXERCISES = 5;
+
+/** Questões por sessão de prática de um assunto */
+export const PRACTICE_QUESTIONS_PER_SESSION = 5;

@@ -163,30 +163,19 @@ export function ConceptTheoryView({
           </>
         )}
 
-        {lesson.practiceEnabled !== false ? (
-          <View style={[styles.practiceCard, cardShadow]}>
-            <Text style={styles.practiceTitle}>Pronto para praticar?</Text>
-            <Text style={styles.practiceSub}>
-              Reforce com exercícios interativos deste assunto.
-            </Text>
-            <Pressable
-              style={styles.primaryBtn}
-              onPress={() => navigation.navigate("Exercise", { moduleId, lessonId })}
-            >
-              <Text style={styles.primaryBtnTxt}>Ir para Exercícios</Text>
-              <Ionicons name="chevron-forward" size={18} color="#fff" />
-            </Pressable>
-          </View>
-        ) : (
-          <View style={[styles.soonCard, cardShadow]}>
-            <Ionicons name="construct-outline" size={20} color={colors.primary} />
-            <Text style={styles.soonTitle}>Prática interativa em breve</Text>
-            <Text style={styles.soonSub}>
-              Por enquanto, use esta teoria como base e pratique mentalmente. As operações básicas já têm
-              exercícios na aba Trilha.
-            </Text>
-          </View>
-        )}
+        <View style={[styles.practiceCard, cardShadow]}>
+          <Text style={styles.practiceTitle}>Pronto para praticar?</Text>
+          <Text style={styles.practiceSub}>
+            Reforce com exercícios interativos deste assunto.
+          </Text>
+          <Pressable
+            style={styles.primaryBtn}
+            onPress={() => navigation.navigate("Exercise", { moduleId, lessonId })}
+          >
+            <Text style={styles.primaryBtnTxt}>Ir para Exercícios</Text>
+            <Ionicons name="chevron-forward" size={18} color="#fff" />
+          </Pressable>
+        </View>
 
         <View style={[styles.card, cardShadow]}>
           <Text style={styles.small}>
@@ -337,18 +326,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   primaryBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
-  soonCard: {
-    flexDirection: "column",
-    gap: 8,
-    backgroundColor: "#F8FAFC",
-    borderRadius: radius.card,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderStyle: "dashed",
-  },
-  soonTitle: { fontSize: 16, fontWeight: "800", color: colors.text },
-  soonSub: { fontSize: 13, color: colors.muted, lineHeight: 19 },
   small: { fontSize: 13, color: colors.muted, lineHeight: 19 },
   secondaryBtn: {
     marginTop: 12,

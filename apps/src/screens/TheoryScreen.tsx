@@ -408,6 +408,14 @@ export function TheoryScreen() {
   }
 
   const alreadyDone = completed.includes(lessonId);
+  const lessonOperation = lesson.operation;
+  const operationUi = useMemo(
+    () => OPERATION_UI[lessonOperation],
+    [lessonOperation],
+  );
+  const examples = useMemo(() => getExamples(lessonOperation), [lessonOperation]);
+  const ruleNotes = useMemo(() => getRuleNotes(lessonOperation), [lessonOperation]);
+  const operationName = lesson.title;
 
   if (lesson.conceptTheory) {
     return (
@@ -423,14 +431,6 @@ export function TheoryScreen() {
       />
     );
   }
-
-  const operationUi = useMemo(
-    () => OPERATION_UI[lesson.operation],
-    [lesson.operation],
-  );
-  const examples = useMemo(() => getExamples(lesson.operation), [lesson.operation]);
-  const ruleNotes = useMemo(() => getRuleNotes(lesson.operation), [lesson.operation]);
-  const operationName = lesson.title;
 
   return (
     <View style={styles.shell}>

@@ -1,15 +1,25 @@
 import type { RouteProp } from "@react-navigation/native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   answersMatch,
+  arithmeticProblemSignature,
+  checkConceptChoiceAnswer,
+  checkConceptNumericAnswer,
+  conceptProblemSignature,
+  explainConceptSolution,
   explainSolution,
   formatProblem,
-  generateArithmeticProblem,
+  generateArithmeticProblemUnique,
+  generateConceptProblemUnique,
   getLesson,
+  markPracticeCompleted,
   parseUserAnswer,
+  PRACTICE_QUESTIONS_PER_SESSION,
   recordExerciseOutcome,
   type ArithmeticProblem,
+  type ConceptChoiceProblem,
+  type ConceptProblem,
 } from "@mathning/shared";
 import {
   Pressable,
@@ -21,12 +31,49 @@ import {
 } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuthContext } from "../context/AuthContext";
-import { recordDemoExercise } from "../lib/demoProgress";
+import { markDemoPracticeCompleted, recordDemoExercise } from "../lib/demoProgress";
 import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
 
 type R = RouteProp<RootStackParamList, "Exercise">;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+type PracticeState =
+  | { mode: "arithmetic"; problem: ArithmeticProblem }
+  | { mode: "concept"; problem: ConceptProblem };
+
+type SessionPhase = "active" | "summary";
+
+function nextProblem(
+  lesson: NonNullable<ReturnType<typeof getLesson>>,
+  tier: 1 | 2 | 3,
+  usedInSession: ReadonlySet<string>,
+): PracticeState | null {
+  if (lesson.conceptTheory) {
+    const concept = generateConceptProblemUnique(lesson.id, tier, usedInSession);
+    if (!concept) return null;
+    return { mode: "concept", problem: concept };
+  }
+  return {
+    mode: "arithmetic",
+    problem: generateArithmeticProblemUnique(lesson.operation, tier, usedInSession),
+  };
+}
+
+function initialSessionState() {
+  return {
+    phase: "active" as SessionPhase,
+    questionNum: 1,
+    correctCount: 0,
+    tier: 1 as 1 | 2 | 3,
+    sessionStreak: 0,
+    practice: null as PracticeState | null,
+    input: "",
+    selectedChoice: null as number | null,
+    feedback: "idle" as "idle" | "ok" | "bad",
+    busy: false,
+  };
+}
 
 export function ExerciseScreen() {
   const navigation = useNavigation<Nav>();
@@ -41,32 +88,71 @@ export function ExerciseScreen() {
     ? isLessonUnlocked(moduleId, lessonId, completed)
     : false;
 
+  const [phase, setPhase] = useState<SessionPhase>("active");
+  const [questionNum, setQuestionNum] = useState(1);
+  const [correctCount, setCorrectCount] = useState(0);
   const [tier, setTier] = useState<1 | 2 | 3>(1);
-  const [problem, setProblem] = useState<ArithmeticProblem | null>(null);
-  const [input, setInput] = useState("");
-  const [feedback, setFeedback] = useState<"idle" | "ok" | "bad">("idle");
   const [sessionStreak, setSessionStreak] = useState(0);
+  const [practice, setPractice] = useState<PracticeState | null>(null);
+  const [input, setInput] = useState("");
+  const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState<"idle" | "ok" | "bad">("idle");
   const [busy, setBusy] = useState(false);
+  const usedProblemSignaturesRef = useRef<Set<string>>(new Set());
+
+  const resetSession = useCallback(() => {
+    if (!lesson) return;
+    usedProblemSignaturesRef.current = new Set();
+    const next = initialSessionState();
+    setPhase(next.phase);
+    setQuestionNum(next.questionNum);
+    setCorrectCount(next.correctCount);
+    setTier(next.tier);
+    setSessionStreak(next.sessionStreak);
+    setPractice(nextProblem(lesson, 1, usedProblemSignaturesRef.current));
+    setInput(next.input);
+    setSelectedChoice(next.selectedChoice);
+    setFeedback(next.feedback);
+    setBusy(next.busy);
+  }, [lesson]);
 
   useEffect(() => {
-    if (!lesson) return;
-    setTier(1);
-    setSessionStreak(0);
-    setProblem(generateArithmeticProblem(lesson.operation, 1));
-    setInput("");
-    setFeedback("idle");
-  }, [moduleId, lessonId, lesson]);
+    resetSession();
+  }, [moduleId, lessonId, resetSession]);
+
+  async function markSessionComplete() {
+    if (!progress) return;
+    if (demo) {
+      await updateLocalDemo(markDemoPracticeCompleted(progress, lessonId));
+    } else if (db && uid) {
+      await markPracticeCompleted(db, uid, lessonId);
+      await refreshProgress();
+    }
+  }
 
   async function handleSubmit() {
-    if (!lesson || !problem || !progress || busy) return;
-    const val = parseUserAnswer(input);
-    if (val === null) return;
+    if (!lesson || !practice || !progress || busy || phase !== "active") return;
 
-    const ok = answersMatch(val, problem.answer);
+    let ok = false;
+    if (practice.mode === "arithmetic") {
+      const val = parseUserAnswer(input);
+      if (val === null) return;
+      ok = answersMatch(val, practice.problem.answer);
+    } else if (practice.problem.kind === "choice") {
+      if (selectedChoice === null) return;
+      ok = checkConceptChoiceAnswer(practice.problem, selectedChoice);
+    } else {
+      const val = parseUserAnswer(input);
+      if (val === null) return;
+      ok = checkConceptNumericAnswer(practice.problem, val);
+    }
+
     setFeedback(ok ? "ok" : "bad");
     setBusy(true);
 
     const streakAfter = ok ? sessionStreak + 1 : 0;
+    const newCorrectCount = ok ? correctCount + 1 : correctCount;
+    const isLastQuestion = questionNum >= PRACTICE_QUESTIONS_PER_SESSION;
 
     if (demo) {
       const next = recordDemoExercise(progress, ok, streakAfter, lessonId);
@@ -89,10 +175,29 @@ export function ExerciseScreen() {
     }
 
     setTimeout(() => {
+      setCorrectCount(newCorrectCount);
+      if (isLastQuestion) {
+        setPhase("summary");
+        void markSessionComplete();
+        setBusy(false);
+        return;
+      }
+      const sig =
+        practice.mode === "concept"
+          ? conceptProblemSignature(practice.problem)
+          : arithmeticProblemSignature(practice.problem);
+      usedProblemSignaturesRef.current.add(sig);
+      const nextPractice = nextProblem(
+        lesson,
+        nextTier,
+        usedProblemSignaturesRef.current,
+      );
       setTier(nextTier);
       setSessionStreak(nextStreak);
-      setProblem(generateArithmeticProblem(lesson.operation, nextTier));
+      setQuestionNum(questionNum + 1);
+      setPractice(nextPractice);
       setInput("");
+      setSelectedChoice(null);
       setFeedback("idle");
       setBusy(false);
     }, 1400);
@@ -106,49 +211,121 @@ export function ExerciseScreen() {
     );
   }
 
-  if (lesson.practiceEnabled === false) {
+  if (phase === "summary") {
+    const pct = Math.round(
+      (correctCount / PRACTICE_QUESTIONS_PER_SESSION) * 100,
+    );
+    const message =
+      pct === 100
+        ? "Perfeito! Você dominou este assunto."
+        : pct >= 80
+          ? "Ótimo desempenho! Continue assim."
+          : pct >= 60
+            ? "Bom trabalho! Vale revisar a teoria."
+            : "Continue praticando — a teoria ajuda muito.";
+
     return (
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.eyebrow}>Prática</Text>
+        <Text style={styles.eyebrow}>Prática concluída</Text>
         <Text style={styles.h1}>{lesson.title}</Text>
         <View style={styles.card}>
-          <Text style={styles.muted}>
-            A prática interativa para este assunto ainda não está disponível. Continue estudando a teoria e
-            use as operações básicas para treinar cálculo.
-          </Text>
-          <Pressable style={styles.primaryBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.primaryBtnTxt}>Voltar</Text>
+          <View style={styles.summaryScoreWrap}>
+            <Text style={styles.summaryScore}>
+              {correctCount}/{PRACTICE_QUESTIONS_PER_SESSION}
+            </Text>
+            <Text style={styles.summaryLabel}>acertos</Text>
+          </View>
+          <Text style={styles.summaryPct}>{pct}% de aproveitamento</Text>
+          <Text style={styles.summaryMsg}>{message}</Text>
+          <Pressable style={styles.primaryBtn} onPress={resetSession}>
+            <Text style={styles.primaryBtnTxt}>Praticar novamente</Text>
+          </Pressable>
+          <Pressable style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.secondaryBtnTxt}>Voltar à trilha</Text>
           </Pressable>
         </View>
       </ScrollView>
     );
   }
 
-  if (!problem) {
+  if (!practice) {
     return (
       <View style={styles.center}>
-        <Text>Preparando…</Text>
+        <Text style={styles.muted}>Exercícios não encontrados para este assunto.</Text>
       </View>
     );
   }
 
+  const isChoice =
+    practice.mode === "concept" && practice.problem.kind === "choice";
+  const choiceProblem = isChoice
+    ? (practice.problem as ConceptChoiceProblem)
+    : null;
+  const canSubmit =
+    !busy &&
+    (isChoice ? selectedChoice !== null : input.trim() !== "");
+
+  const explanation =
+    practice.mode === "arithmetic"
+      ? explainSolution(practice.problem)
+      : explainConceptSolution(practice.problem);
+
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
       <Text style={styles.eyebrow}>Prática · {lesson.title}</Text>
-      <Text style={styles.h1}>Qual é o resultado?</Text>
+      <Text style={styles.progress}>
+        Questão {questionNum} de {PRACTICE_QUESTIONS_PER_SESSION}
+      </Text>
+      <Text style={styles.h1}>
+        {practice.mode === "concept" ? practice.problem.prompt : "Qual é o resultado?"}
+      </Text>
       <View style={styles.card}>
-        <Text style={styles.sum}>{formatProblem(problem)}</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={input}
-          onChangeText={setInput}
-          placeholder="?"
-          placeholderTextColor="#9a94a8"
-        />
+        {practice.mode === "arithmetic" ? (
+          <Text style={styles.sum}>{formatProblem(practice.problem)}</Text>
+        ) : null}
+
+        {choiceProblem ? (
+          <View style={styles.options}>
+            {choiceProblem.options.map((opt, i) => {
+              const selected = selectedChoice === i;
+              return (
+                <Pressable
+                  key={i}
+                  disabled={busy}
+                  onPress={() => setSelectedChoice(i)}
+                  style={[
+                    styles.optionBtn,
+                    selected && styles.optionBtnSelected,
+                    busy && styles.disabled,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.optionTxt,
+                      selected && styles.optionTxtSelected,
+                    ]}
+                  >
+                    {opt}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={input}
+            onChangeText={setInput}
+            placeholder="?"
+            placeholderTextColor="#9a94a8"
+            editable={!busy}
+          />
+        )}
+
         <Pressable
-          style={[styles.primaryBtn, busy && styles.disabled]}
-          disabled={busy}
+          style={[styles.primaryBtn, (!canSubmit || busy) && styles.disabled]}
+          disabled={!canSubmit}
           onPress={() => void handleSubmit()}
         >
           <Text style={styles.primaryBtnTxt}>Verificar</Text>
@@ -159,11 +336,11 @@ export function ExerciseScreen() {
         {feedback === "bad" && (
           <View style={styles.fbBad}>
             <Text style={styles.bad}>Não foi dessa vez.</Text>
-            <Text style={styles.small}>{explainSolution(problem)}</Text>
+            <Text style={styles.small}>{explanation}</Text>
           </View>
         )}
         <Text style={styles.small}>
-          Nível {tier} · Sequência na sessão: {sessionStreak}
+          Acertos nesta sessão: {correctCount} · Nível {tier}
         </Text>
       </View>
     </ScrollView>
@@ -180,7 +357,13 @@ const styles = StyleSheet.create({
     color: "#6b6578",
     marginBottom: 4,
   },
-  h1: { fontSize: 22, fontWeight: "700", color: "#1a1a22", marginBottom: 12 },
+  progress: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#5b4dff",
+    marginBottom: 6,
+  },
+  h1: { fontSize: 20, fontWeight: "700", color: "#1a1a22", marginBottom: 12, lineHeight: 28 },
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -195,6 +378,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: "#1a1a22",
   },
+  options: { gap: 10, marginBottom: 12 },
+  optionBtn: {
+    borderWidth: 1,
+    borderColor: "#e2dfe8",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    backgroundColor: "#f6f4f8",
+  },
+  optionBtnSelected: {
+    borderColor: "#5b4dff",
+    backgroundColor: "#EEEAFF",
+  },
+  optionTxt: { fontSize: 15, color: "#1a1a22", fontWeight: "600" },
+  optionTxtSelected: { color: "#5b4dff" },
   input: {
     borderWidth: 1,
     borderColor: "#e2dfe8",
@@ -212,10 +410,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryBtnTxt: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  secondaryBtn: {
+    marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e2dfe8",
+  },
+  secondaryBtnTxt: { color: "#1a1a22", fontWeight: "600", fontSize: 16 },
   disabled: { opacity: 0.6 },
   ok: { marginTop: 12, color: "#0d9b5c", fontWeight: "600" },
   fbBad: { marginTop: 12 },
   bad: { color: "#c53030", fontWeight: "600" },
   small: { marginTop: 12, fontSize: 13, color: "#6b6578" },
   muted: { color: "#6b6578" },
+  summaryScoreWrap: { alignItems: "center", marginBottom: 8 },
+  summaryScore: { fontSize: 48, fontWeight: "800", color: "#5b4dff" },
+  summaryLabel: { fontSize: 14, color: "#6b6578", fontWeight: "600" },
+  summaryPct: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1a1a22",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  summaryMsg: {
+    fontSize: 14,
+    color: "#6b6578",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 20,
+  },
 });

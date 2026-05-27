@@ -64,3 +64,15 @@ export function markDemoLessonDone(
     completedLessonIds: Array.from(completed),
   };
 }
+
+export function markDemoPracticeCompleted(
+  data: UserProgressDoc,
+  lessonId: string,
+): UserProgressDoc {
+  const practiced = new Set(data.practicedLessonIds ?? []);
+  practiced.add(lessonId);
+  return {
+    ...data,
+    practicedLessonIds: Array.from(practiced),
+  };
+}

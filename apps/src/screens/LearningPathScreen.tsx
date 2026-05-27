@@ -36,6 +36,7 @@ export function LearningPathScreen() {
   useAppHeader(navigation, "Trilha");
   const { progress, loading } = useAuthContext();
   const completed = progress?.completedLessonIds ?? [];
+  const practiced = progress?.practicedLessonIds ?? [];
 
   if (loading || !progress) {
     return (
@@ -46,7 +47,6 @@ export function LearningPathScreen() {
   }
 
   const activeModules = MODULES.filter((m) => m.available);
-  const lockedModules = MODULES.filter((m) => !m.available);
 
   return (
     <View style={styles.shell}>
@@ -85,6 +85,7 @@ export function LearningPathScreen() {
 
               {mod.lessons.map((lesson) => {
                 const isDone = completed.includes(lesson.id);
+                const hasPracticed = practiced.includes(lesson.id);
                 const open = isLessonUnlocked(mod.id, lesson.id, completed);
                 const goTheory = () =>
                   navigation.navigate("TheoryDetail", {
@@ -153,52 +154,32 @@ export function LearningPathScreen() {
                         )}
                       </View>
                     </Pressable>
-                    {open && lesson.practiceEnabled !== false ? (
+                    {open ? (
                       <Pressable
                         onPress={goPractice}
                         style={({ pressed }) => [
-                          styles.pratiqueBtn,
+                          hasPracticed ? styles.pratiqueBtnAgain : styles.pratiqueBtn,
                           pressed && { opacity: 0.9 },
                         ]}
                         accessibilityRole="button"
-                        accessibilityLabel={`Praticar ${lesson.title}`}
+                        accessibilityLabel={
+                          hasPracticed
+                            ? `Praticar novamente ${lesson.title}`
+                            : `Praticar ${lesson.title}`
+                        }
                       >
-                        <Text style={styles.pratiqueBtnTxt}>Pratique</Text>
+                        <Text
+                          style={
+                            hasPracticed ? styles.pratiqueBtnAgainTxt : styles.pratiqueBtnTxt
+                          }
+                        >
+                          {hasPracticed ? "Praticar novamente" : "Pratique"}
+                        </Text>
                       </Pressable>
                     ) : null}
                   </View>
                 );
               })}
-            </View>
-          );
-        })}
-
-        {lockedModules.map((mod, i) => {
-          const phaseNum = activeModules.length + i + 1;
-          return (
-            <View key={mod.id} style={[styles.lockedCard, cardShadow]}>
-              <View style={styles.lockedTop}>
-                <View style={styles.lockCircle}>
-                  <Ionicons name="lock-closed" size={22} color="#fff" />
-                </View>
-                <View style={styles.lockedHead}>
-                  <View style={styles.lockedTitleRow}>
-                    <Text style={styles.lockedPhase}>Fase {phaseNum}</Text>
-                    <View style={styles.soonPill}>
-                      <Text style={styles.soonPillTxt}>Em breve</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.lockedName}>{mod.title}</Text>
-                  <Text style={styles.lockedDesc}>{mod.description}</Text>
-                </View>
-              </View>
-              <View style={styles.lockedDivider} />
-              <View style={styles.lockedFoot}>
-                <Ionicons name="time-outline" size={18} color={colors.muted} />
-                <Text style={styles.lockedFootTxt}>
-                  Esta fase estará disponível em breve. Continue praticando!
-                </Text>
-              </View>
             </View>
           );
         })}
@@ -326,6 +307,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
+  pratiqueBtnAgain: {
+    flexShrink: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: colors.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  pratiqueBtnAgainTxt: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: "800",
+  },
   completePill: {
     backgroundColor: colors.successBg,
     paddingHorizontal: 10,
@@ -337,50 +332,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.successDark,
   },
-  lockedCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    padding: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    marginTop: 8,
-  },
-  lockedTop: { flexDirection: "row", gap: 12 },
-  lockCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#9CA3AF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  lockedHead: { flex: 1 },
-  lockedTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  lockedPhase: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: colors.text,
-    letterSpacing: 0.5,
-  },
-  soonPill: {
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  soonPillTxt: { fontSize: 11, fontWeight: "600", color: colors.muted },
-  lockedName: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: colors.text,
-    marginTop: 4,
-  },
-  lockedDesc: { fontSize: 13, color: colors.muted, marginTop: 4, lineHeight: 18 },
-  lockedDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginVertical: 12,
-  },
-  lockedFoot: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
-  lockedFootTxt: { flex: 1, fontSize: 12, color: colors.muted, lineHeight: 17 },
 });

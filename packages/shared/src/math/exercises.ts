@@ -25,6 +25,31 @@ export function boundsForOperation(
   }
 }
 
+/** Identifica uma conta na sessão (evita repetir a mesma combinação). */
+export function arithmeticProblemSignature(p: ArithmeticProblem): string {
+  if (p.operation === "add" || p.operation === "multiply") {
+    const lo = Math.min(p.a, p.b);
+    const hi = Math.max(p.a, p.b);
+    return `${p.operation}:${lo}:${hi}`;
+  }
+  return `${p.operation}:${p.a}:${p.b}`;
+}
+
+const MAX_ARITHMETIC_UNIQUE_TRIES = 200;
+
+export function generateArithmeticProblemUnique(
+  operation: Operation,
+  difficultyTier: 1 | 2 | 3,
+  usedSignatures: ReadonlySet<string>,
+): ArithmeticProblem {
+  for (let i = 0; i < MAX_ARITHMETIC_UNIQUE_TRIES; i++) {
+    const p = generateArithmeticProblem(operation, difficultyTier);
+    const sig = arithmeticProblemSignature(p);
+    if (!usedSignatures.has(sig)) return p;
+  }
+  return generateArithmeticProblem(operation, difficultyTier);
+}
+
 export function generateArithmeticProblem(
   operation: Operation,
   difficultyTier: 1 | 2 | 3 = 1,

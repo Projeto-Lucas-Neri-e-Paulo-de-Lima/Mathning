@@ -56,7 +56,6 @@ export function TheoryHubScreen() {
   }
 
   const activeModules = MODULES.filter((m) => m.available);
-  const lockedModules = MODULES.filter((m) => !m.available);
 
   return (
     <View style={styles.shell}>
@@ -191,7 +190,7 @@ export function TheoryHubScreen() {
                           {open ? "Ler teoria" : "Bloqueado"}
                         </Text>
                       </Pressable>
-                      {open && lesson.practiceEnabled !== false ? (
+                      {open ? (
                         <Pressable
                           onPress={goPractice}
                           style={({ pressed }) => [
@@ -214,20 +213,6 @@ export function TheoryHubScreen() {
                   </View>
                 );
               })}
-            </View>
-          );
-        })}
-
-        {lockedModules.map((mod, i) => {
-          const phaseNum = activeModules.length + i + 1;
-          return (
-            <View key={mod.id} style={[styles.comingSoonCard, cardShadow]}>
-              <View style={styles.comingSoonRow}>
-                <Ionicons name="lock-closed" size={18} color={colors.locked} />
-                <Text style={styles.comingSoonLabel}>Fase {phaseNum} · Em breve</Text>
-              </View>
-              <Text style={styles.comingSoonTitle}>{mod.title}</Text>
-              <Text style={styles.comingSoonDesc}>{mod.description}</Text>
             </View>
           );
         })}
@@ -399,25 +384,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-  comingSoonCard: {
-    borderRadius: radius.card,
-    padding: 14,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "#D1D5DB",
-    backgroundColor: "#F9FAFB",
-  },
-  comingSoonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 6,
-  },
-  comingSoonLabel: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  comingSoonTitle: { color: colors.text, fontSize: 17, fontWeight: "800", marginBottom: 4 },
-  comingSoonDesc: { color: colors.muted, fontSize: 13, lineHeight: 18 },
 });

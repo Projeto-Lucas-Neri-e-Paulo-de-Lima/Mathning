@@ -59,6 +59,26 @@ export interface ArithmeticProblem {
   answer: number;
 }
 
+export interface ConceptChoiceProblem {
+  kind: "choice";
+  prompt: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  /** Tier mínimo para aparecer (padrão: 1) */
+  minTier?: 1 | 2 | 3;
+}
+
+export interface ConceptNumericProblem {
+  kind: "numeric";
+  prompt: string;
+  answer: number;
+  explanation: string;
+  minTier?: 1 | 2 | 3;
+}
+
+export type ConceptProblem = ConceptChoiceProblem | ConceptNumericProblem;
+
 export interface UserProgressDoc {
   xp: number;
   level: number;
@@ -74,6 +94,8 @@ export interface UserProgressDoc {
   streak: number;
   /** Lições concluídas (ids) */
   completedLessonIds: string[];
+  /** Assuntos com pelo menos uma sessão de prática concluída */
+  practicedLessonIds?: string[];
   /** Data (YYYY-MM-DD) da contagem diária abaixo */
   dailyExerciseDate?: string;
   /** Exercícios feitos na data acima (meta diária) */

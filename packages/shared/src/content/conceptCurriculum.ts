@@ -12,7 +12,6 @@ function conceptLesson(
     summary,
     operation: "add",
     difficultyTier: 1,
-    practiceEnabled: false,
     conceptTheory: theory,
   };
 }

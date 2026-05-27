@@ -31,6 +31,7 @@ export function defaultUserProgress(uid: string): UserProgressDoc {
     lastActiveDate: "",
     streak: 0,
     completedLessonIds: [],
+    practicedLessonIds: [],
     dailyExerciseDate: "",
     dailyExerciseCount: 0,
   };
@@ -152,5 +153,21 @@ export async function markLessonCompleted(
   completed.add(lessonId);
   await updateDoc(ref, {
     completedLessonIds: Array.from(completed),
+  });
+}
+
+export async function markPracticeCompleted(
+  db: Firestore,
+  uid: string,
+  lessonId: string,
+): Promise<void> {
+  const ref = doc(db, USERS_COLLECTION, uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as UserProgressDoc;
+  const practiced = new Set(data.practicedLessonIds ?? []);
+  practiced.add(lessonId);
+  await updateDoc(ref, {
+    practicedLessonIds: Array.from(practiced),
   });
 }
