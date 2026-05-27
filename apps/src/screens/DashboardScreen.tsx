@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import { BottomNav } from "../components/BottomNav";
+import { ProfileAvatar } from "../components/ProfileAvatar";
 import { useAuthContext } from "../context/AuthContext";
 import { useAppHeader } from "../hooks/useAppHeader";
 import type { RootStackParamList } from "../navigation/types";
@@ -38,8 +39,9 @@ const cardShadow = Platform.select({
 
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
-  useAppHeader(navigation, "Mathning");
-  const { progress, loading, error, demo, signOutUser } = useAuthContext();
+  useAppHeader(navigation, "Mathning", { showProfileButton: false });
+  const { progress, loading, error, demo, displayName, avatarId, signOutUser } =
+    useAuthContext();
   const [showDemoBanner, setShowDemoBanner] = useState(true);
 
   if (error) {
@@ -93,19 +95,22 @@ export function DashboardScreen() {
   return (
     <View style={styles.shell}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        {!demo && (
-          <View style={styles.logoutRow}>
+        <View style={[styles.welcomeRow, cardShadow]}>
+          <ProfileAvatar avatarId={avatarId} size={56} />
+          <View style={styles.welcomeText}>
+            <Text style={styles.welcomeEyebrow}>Olá!</Text>
+            <Text style={styles.welcomeName} numberOfLines={2}>
+              {displayName || (demo ? "Visitante" : "Estudante")}
+            </Text>
             <Pressable
-              style={styles.logoutBtn}
-              onPress={() => void signOutUser()}
+              onPress={() => navigation.navigate("Profile")}
               accessibilityRole="button"
-              accessibilityLabel="Sair da conta"
+              accessibilityLabel="Abrir perfil"
             >
-              <Ionicons name="log-out-outline" size={18} color={colors.primary} />
-              <Text style={styles.logoutTxt}>Sair</Text>
+              <Text style={styles.welcomeLink}>Ver perfil</Text>
             </Pressable>
           </View>
-        )}
+        </View>
 
         {demo && showDemoBanner && (
           <View style={styles.banner}>
@@ -241,24 +246,34 @@ const styles = StyleSheet.create({
   shell: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 20, paddingBottom: 32, gap: 14 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 8 },
-  logoutRow: {
-    alignItems: "flex-end",
-  },
-  logoutBtn: {
+  welcomeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 14,
     backgroundColor: colors.card,
+    borderRadius: radius.card,
+    padding: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
-  logoutTxt: {
-    color: colors.primary,
+  welcomeText: { flex: 1, minWidth: 0 },
+  welcomeEyebrow: {
+    fontSize: 12,
     fontWeight: "700",
+    color: colors.primary,
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  welcomeName: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: 4,
+  },
+  welcomeLink: {
     fontSize: 13,
+    fontWeight: "700",
+    color: colors.primaryText,
   },
   card: {
     backgroundColor: colors.card,

@@ -43,7 +43,7 @@ const THEORY_VISUAL = {
  */
 export function TheoryHubScreen() {
   const navigation = useNavigation<Nav>();
-  useAppHeader(navigation, "Teoria");
+  useAppHeader(navigation, "Teoria", { showProfileButton: false });
   const { progress, loading } = useAuthContext();
   const completed = progress?.completedLessonIds ?? [];
 

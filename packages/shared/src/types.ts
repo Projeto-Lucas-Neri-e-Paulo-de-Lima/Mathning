@@ -1,3 +1,5 @@
+import type { ProfileAvatarId } from "./profileAvatars.js";
+
 export type Operation = "add" | "subtract" | "multiply" | "divide";
 
 /** Teoria rica para assuntos que não são só operações aritméticas. */
@@ -80,6 +82,10 @@ export interface ConceptNumericProblem {
 export type ConceptProblem = ConceptChoiceProblem | ConceptNumericProblem;
 
 export interface UserProgressDoc {
+  /** Nome escolhido no cadastro (exibido no perfil). */
+  displayName?: string;
+  /** Mascote da logo em uma das cores disponíveis (padrão: purple). */
+  avatarId?: ProfileAvatarId;
   xp: number;
   level: number;
   currentModuleId: string;

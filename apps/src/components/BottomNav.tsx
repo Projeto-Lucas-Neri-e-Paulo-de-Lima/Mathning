@@ -1,52 +1,69 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ProfileAvatar } from "./ProfileAvatar";
+import { useAuthContext } from "../context/AuthContext";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, radius } from "../theme/colors";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const TABS: {
-  key: keyof Pick<
-    RootStackParamList,
-    "Dashboard" | "LearningPath" | "Teoria" | "Performance"
-  >;
-  label: string;
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  iconActive: React.ComponentProps<typeof Ionicons>["name"];
-}[] = [
-  { key: "Dashboard", label: "Início", icon: "home-outline", iconActive: "home" },
+type TabKey = keyof Pick<
+  RootStackParamList,
+  "Dashboard" | "LearningPath" | "Teoria" | "Performance" | "Profile"
+>;
+
+type TabItem =
+  | {
+      key: Exclude<TabKey, "Profile">;
+      label: string;
+      kind: "icon";
+      icon: React.ComponentProps<typeof Ionicons>["name"];
+      iconActive: React.ComponentProps<typeof Ionicons>["name"];
+    }
+  | {
+      key: "Profile";
+      label: string;
+      kind: "profile";
+    };
+
+const TABS: TabItem[] = [
+  { key: "Dashboard", label: "Início", kind: "icon", icon: "home-outline", iconActive: "home" },
   {
     key: "Teoria",
     label: "Teoria",
+    kind: "icon",
     icon: "document-text-outline",
     iconActive: "document-text",
   },
-  { key: "LearningPath", label: "Trilha", icon: "book-outline", iconActive: "book" },
+  { key: "LearningPath", label: "Trilha", kind: "icon", icon: "book-outline", iconActive: "book" },
   {
     key: "Performance",
-    label: "Desempenho",
+    label: "Desemp.",
+    kind: "icon",
     icon: "bar-chart-outline",
     iconActive: "bar-chart",
   },
+  { key: "Profile", label: "Perfil", kind: "profile" },
 ];
+
+const PROFILE_TAB_SIZE = 26;
 
 export function BottomNav({
   navigation,
   route,
 }: {
   navigation: Nav;
-  route: (typeof TABS)[number]["key"];
+  route: TabKey;
 }) {
   const insets = useSafeAreaInsets();
+  const { avatarId } = useAuthContext();
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {TABS.map((item) => {
         const active = route === item.key;
-        const iconName = active ? item.iconActive : item.icon;
         return (
           <Pressable
             key={item.key}
@@ -54,13 +71,26 @@ export function BottomNav({
             onPress={() => navigation.navigate(item.key)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
+            accessibilityLabel={item.label}
           >
-            <Ionicons
-              name={iconName}
-              size={22}
-              color={active ? colors.primary : colors.navInactive}
-            />
-            <Text style={[styles.txt, active && styles.txtActive]}>{item.label}</Text>
+            {item.kind === "profile" ? (
+              <View style={[styles.profileIcon, !active && styles.profileIconInactive]}>
+                <ProfileAvatar
+                  avatarId={avatarId}
+                  size={PROFILE_TAB_SIZE}
+                  variant={active ? "onPrimary" : "onPrimaryMuted"}
+                />
+              </View>
+            ) : (
+              <Ionicons
+                name={active ? item.iconActive : item.icon}
+                size={23}
+                color={active ? colors.navBarActive : colors.navBarInactive}
+              />
+            )}
+            <Text style={[styles.txt, active && styles.txtActive]} numberOfLines={1}>
+              {item.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -72,29 +102,37 @@ const styles = StyleSheet.create({
   wrap: {
     flexDirection: "row",
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: 10,
-    paddingHorizontal: 6,
-    backgroundColor: colors.card,
+    borderTopColor: colors.navBarBorder,
+    paddingTop: 8,
+    paddingHorizontal: 4,
+    backgroundColor: colors.navBar,
   },
   btn: {
     flex: 1,
-    paddingVertical: 8,
+    minWidth: 0,
+    paddingVertical: 6,
     alignItems: "center",
-    gap: 4,
+    gap: 3,
     borderRadius: radius.sm,
-    marginHorizontal: 2,
+    marginHorizontal: 1,
   },
   btnActive: {
-    backgroundColor: colors.overlayPurple,
+    backgroundColor: colors.navBarActiveBg,
+  },
+  profileIcon: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileIconInactive: {
+    opacity: 0.82,
   },
   txt: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: colors.navInactive,
+    fontSize: 10,
+    fontWeight: "600",
+    color: colors.navBarInactive,
   },
   txtActive: {
-    color: colors.primary,
-    fontWeight: "700",
+    color: colors.navBarActive,
+    fontWeight: "800",
   },
 });

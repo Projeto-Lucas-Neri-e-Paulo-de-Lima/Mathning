@@ -5,10 +5,17 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from "@firebase/auth";
 import type { Firestore } from "firebase/firestore";
 import type { UserProgressDoc } from "@mathning/shared";
-import { ensureUserProgress, touchDailyStreak } from "@mathning/shared";
+import {
+  ensureUserProgress,
+  normalizeProfileAvatarId,
+  setUserAvatar,
+  touchDailyStreak,
+  type ProfileAvatarId,
+} from "@mathning/shared";
 import { getDb, getFirebaseAuth, isFirebaseConfigured } from "../lib/firebase";
 import { loadDemoProgress, saveDemoProgress } from "../lib/demoStorage";
 
@@ -55,6 +62,8 @@ function progressErrorMessage(error: unknown): string {
 
 export function useAuthAndProgress() {
   const [uid, setUid] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const [authDisplayName, setAuthDisplayName] = useState<string | null>(null);
   const [progress, setProgress] = useState<UserProgressDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,12 +103,16 @@ export function useAuthAndProgress() {
       setError(null);
       if (!user) {
         setUid(null);
+        setEmail(null);
+        setAuthDisplayName(null);
         setProgress(null);
         setLoading(false);
         return;
       }
 
       setUid(user.uid);
+      setEmail(user.email ?? null);
+      setAuthDisplayName(user.displayName ?? null);
       setLoading(true);
       try {
         const database = getDb() as Firestore;
@@ -138,17 +151,31 @@ export function useAuthAndProgress() {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, displayName: string) => {
       if (demo) {
         throw new Error("Configure o Firebase para criar contas.");
       }
+      const trimmedName = displayName.trim();
+      if (trimmedName.length < 2) {
+        throw new Error("Digite seu nome (mínimo 2 caracteres).");
+      }
+      if (trimmedName.length > 60) {
+        throw new Error("O nome pode ter no máximo 60 caracteres.");
+      }
       try {
         setError(null);
-        await createUserWithEmailAndPassword(
+        const cred = await createUserWithEmailAndPassword(
           getFirebaseAuth(),
           email.trim(),
           password,
         );
+        await updateProfile(cred.user, { displayName: trimmedName });
+        const database = getDb() as Firestore;
+        const p = await ensureUserProgress(database, cred.user.uid, {
+          displayName: trimmedName,
+        });
+        setAuthDisplayName(trimmedName);
+        setProgress(p);
       } catch (e) {
         throw new Error(authErrorMessage(e));
       }
@@ -172,14 +199,24 @@ export function useAuthAndProgress() {
   );
 
   const signOutUser = useCallback(async () => {
-    if (demo) return;
+    if (demo) {
+      setUid(null);
+      setEmail(null);
+      setAuthDisplayName(null);
+      setProgress(null);
+      return;
+    }
     await signOut(getFirebaseAuth());
     setUid(null);
+    setEmail(null);
+    setAuthDisplayName(null);
     setProgress(null);
   }, [demo]);
 
   const continueDemo = useCallback(async () => {
     setUid("demo");
+    setEmail(null);
+    setAuthDisplayName(null);
     setProgress(await loadDemoProgress());
     setLoading(false);
   }, []);
@@ -189,8 +226,31 @@ export function useAuthAndProgress() {
     setProgress(next);
   }, []);
 
+  const updateUserAvatar = useCallback(
+    async (avatarId: ProfileAvatarId) => {
+      if (!progress) return;
+      const next: UserProgressDoc = { ...progress, avatarId };
+      if (demo) {
+        await updateLocalDemo(next);
+        return;
+      }
+      if (!uid || !db) return;
+      await setUserAvatar(db, uid, avatarId);
+      setProgress(next);
+    },
+    [progress, demo, uid, db, updateLocalDemo],
+  );
+
+  const displayName =
+    progress?.displayName?.trim() || authDisplayName?.trim() || null;
+
+  const avatarId = normalizeProfileAvatarId(progress?.avatarId);
+
   return {
     uid,
+    email,
+    displayName,
+    avatarId,
     progress,
     loading,
     error,
@@ -202,6 +262,7 @@ export function useAuthAndProgress() {
     continueDemo,
     refreshProgress,
     updateLocalDemo,
+    updateUserAvatar,
     db,
   };
 }

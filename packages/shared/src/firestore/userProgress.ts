@@ -5,6 +5,10 @@ import {
   updateDoc,
   type Firestore,
 } from "firebase/firestore";
+import {
+  DEFAULT_PROFILE_AVATAR_ID,
+  type ProfileAvatarId,
+} from "../profileAvatars.js";
 import type { UserProgressDoc } from "../types.js";
 import { levelFromXp, xpForCorrectAnswer } from "../gamification.js";
 
@@ -32,6 +36,7 @@ export function defaultUserProgress(uid: string): UserProgressDoc {
     streak: 0,
     completedLessonIds: [],
     practicedLessonIds: [],
+    avatarId: DEFAULT_PROFILE_AVATAR_ID,
     dailyExerciseDate: "",
     dailyExerciseCount: 0,
   };
@@ -50,11 +55,25 @@ export async function getUserProgress(
 export async function ensureUserProgress(
   db: Firestore,
   uid: string,
+  opts?: { displayName?: string },
 ): Promise<UserProgressDoc> {
+  const ref = doc(db, USERS_COLLECTION, uid);
   const existing = await getUserProgress(db, uid);
-  if (existing) return existing;
-  const initial = defaultUserProgress(uid);
-  await setDoc(doc(db, USERS_COLLECTION, uid), initial);
+  const trimmedName = opts?.displayName?.trim();
+
+  if (existing) {
+    if (trimmedName && !existing.displayName) {
+      await updateDoc(ref, { displayName: trimmedName });
+      return { ...existing, displayName: trimmedName };
+    }
+    return existing;
+  }
+
+  const initial: UserProgressDoc = {
+    ...defaultUserProgress(uid),
+    ...(trimmedName ? { displayName: trimmedName } : {}),
+  };
+  await setDoc(ref, initial);
   return initial;
 }
 
@@ -170,4 +189,21 @@ export async function markPracticeCompleted(
   await updateDoc(ref, {
     practicedLessonIds: Array.from(practiced),
   });
+}
+
+export async function setUserAvatar(
+  db: Firestore,
+  uid: string,
+  avatarId: ProfileAvatarId,
+): Promise<void> {
+  const ref = doc(db, USERS_COLLECTION, uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      ...defaultUserProgress(uid),
+      avatarId,
+    });
+    return;
+  }
+  await updateDoc(ref, { avatarId });
 }

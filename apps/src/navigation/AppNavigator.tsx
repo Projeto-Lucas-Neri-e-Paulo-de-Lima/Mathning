@@ -9,6 +9,7 @@ import LoginScreen from "../screens/LoginScreen";
 import { TheoryHubScreen } from "../screens/TheoryHubScreen";
 import { TheoryScreen } from "../screens/TheoryScreen";
 import { PerformanceScreen } from "../screens/PerformanceScreen";
+import { ProfileScreen } from "../screens/ProfileScreen";
 import { colors } from "../theme/colors";
 import type { RootStackParamList } from "./types";
 
@@ -80,6 +81,11 @@ function RootStack() {
             name="Performance"
             component={PerformanceScreen}
             options={{ title: "Desempenho" }}
+          />
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ title: "Perfil" }}
           />
         </>
       )}

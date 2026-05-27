@@ -33,7 +33,7 @@ const cardShadow = Platform.select({
 
 export function LearningPathScreen() {
   const navigation = useNavigation<Nav>();
-  useAppHeader(navigation, "Trilha");
+  useAppHeader(navigation, "Trilha", { showProfileButton: false });
   const { progress, loading } = useAuthContext();
   const completed = progress?.completedLessonIds ?? [];
   const practiced = progress?.practicedLessonIds ?? [];

@@ -20,6 +20,7 @@ const Logo = require("../../assets/mathning_sem_fundo.png");
 type AuthMode = "signIn" | "signUp";
 
 export default function LoginScreen() {
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mode, setMode] = useState<AuthMode>("signIn");
@@ -41,6 +42,11 @@ export default function LoginScreen() {
       return;
     }
 
+    if (isSignUp && nome.trim().length < 2) {
+      setFormError("Digite seu nome (mínimo 2 caracteres).");
+      return;
+    }
+
     if (!cleanEmail || !senha) {
       setFormError("Preencha email e senha para continuar.");
       return;
@@ -54,7 +60,7 @@ export default function LoginScreen() {
     try {
       setSubmitting(true);
       if (isSignUp) {
-        await signUp(cleanEmail, senha);
+        await signUp(cleanEmail, senha, nome.trim());
       } else {
         await signIn(cleanEmail, senha);
       }
@@ -95,6 +101,7 @@ export default function LoginScreen() {
 
   function toggleMode() {
     setMode(isSignUp ? "signIn" : "signUp");
+    if (isSignUp) setNome("");
     setFormError(null);
     setInfo(null);
   }
@@ -140,6 +147,24 @@ export default function LoginScreen() {
                   Firebase ainda nao configurado. Preencha apps/.env para usar
                   login real ou continue em demonstracao.
                 </Text>
+              </View>
+            ) : null}
+
+            {isSignUp ? (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Nome</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Como quer ser chamado?"
+                  placeholderTextColor="#9CA3AF"
+                  value={nome}
+                  onChangeText={setNome}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoComplete="name"
+                  textContentType="name"
+                  editable={!submitting}
+                />
               </View>
             ) : null}
 

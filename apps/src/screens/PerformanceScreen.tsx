@@ -48,7 +48,7 @@ function weekBarsFromProgress(totalXp: number, lastActiveDate: string): number[]
 
 export function PerformanceScreen() {
   const navigation = useNavigation<Nav>();
-  useAppHeader(navigation, "Desempenho");
+  useAppHeader(navigation, "Desempenho", { showProfileButton: false });
   const { progress, loading } = useAuthContext();
 
   if (loading || !progress) {

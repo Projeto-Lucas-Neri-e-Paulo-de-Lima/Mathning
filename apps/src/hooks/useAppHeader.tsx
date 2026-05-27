@@ -1,19 +1,27 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect } from "react";
-import { Alert, Pressable, View } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
+import { colors } from "../theme/colors";
+import { ProfileAvatar } from "../components/ProfileAvatar";
+import { useAuthContext } from "../context/AuthContext";
 import type { RootStackParamList } from "../navigation/types";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-function infoPress() {
-  Alert.alert(
-    "Mathning",
-    "Pratique matemática na sua trilha, acompanhe metas diárias e veja seu desempenho.",
-  );
-}
+type AppHeaderOptions = {
+  /** Exibe o botão de perfil no canto superior direito (padrão: true). */
+  showProfileButton?: boolean;
+};
 
-export function useAppHeader(navigation: Nav, title: string) {
+export function useAppHeader(
+  navigation: Nav,
+  title: string,
+  options?: AppHeaderOptions,
+) {
+  const showProfile = options?.showProfileButton !== false;
+  const { avatarId } = useAuthContext();
+
   useLayoutEffect(() => {
     const apply = () => {
       const canBack = navigation.canGoBack();
@@ -37,21 +45,31 @@ export function useAppHeader(navigation: Nav, title: string) {
               </Pressable>
             )
           : () => null,
-        headerRight: () => (
-          <View style={{ marginRight: 4 }}>
-            <Pressable
-              onPress={infoPress}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Informações"
-            >
-              <Ionicons name="information-circle-outline" size={26} color="#1A1A22" />
-            </Pressable>
-          </View>
-        ),
+        headerRight: showProfile
+          ? () => (
+              <Pressable
+                onPress={() => navigation.navigate("Profile")}
+                hitSlop={12}
+                style={headerStyles.profileBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Perfil"
+              >
+                <ProfileAvatar avatarId={avatarId} size={34} variant="header" />
+              </Pressable>
+            )
+          : () => null,
       });
     };
     apply();
     return navigation.addListener("focus", apply);
-  }, [navigation, title]);
+  }, [navigation, title, showProfile, avatarId]);
 }
+
+const headerStyles = StyleSheet.create({
+  profileBtn: {
+    marginRight: 8,
+    padding: 3,
+    borderRadius: 999,
+    backgroundColor: colors.primaryMuted,
+  },
+});

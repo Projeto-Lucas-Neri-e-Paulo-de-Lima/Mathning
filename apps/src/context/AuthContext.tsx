@@ -1,21 +1,25 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { Firestore } from "firebase/firestore";
-import type { UserProgressDoc } from "@mathning/shared";
+import type { ProfileAvatarId, UserProgressDoc } from "@mathning/shared";
 import { useAuthAndProgress } from "../hooks/useAuthAndProgress";
 
 export interface AuthContextValue {
   uid: string | null;
+  email: string | null;
+  displayName: string | null;
+  avatarId: ProfileAvatarId;
   progress: UserProgressDoc | null;
   loading: boolean;
   error: string | null;
   demo: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOutUser: () => Promise<void>;
   continueDemo: () => Promise<void>;
   refreshProgress: () => Promise<void>;
   updateLocalDemo: (next: UserProgressDoc) => Promise<void>;
+  updateUserAvatar: (avatarId: ProfileAvatarId) => Promise<void>;
   db: Firestore | null;
 }
 

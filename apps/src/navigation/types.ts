@@ -7,4 +7,5 @@ export type RootStackParamList = {
   TheoryDetail: { moduleId: string; lessonId: string };
   Exercise: { moduleId: string; lessonId: string };
   Performance: undefined;
+  Profile: undefined;
 };
