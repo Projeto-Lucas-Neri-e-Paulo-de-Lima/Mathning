@@ -349,6 +349,13 @@ const POOLS: Record<string, ConceptProblem[]> = {
       2,
     ),
     numeric("3 caixas com 4 lápis cada: total de lápis?", 12, "3 × 4 = 12."),
+    choice(
+      "Pedro leu 12 páginas em 3 dias, no mesmo ritmo. Em 5 dias, lê quantas páginas?",
+      ["20", "15", "9"],
+      0,
+      "4 páginas/dia × 5 dias = 20.",
+      2,
+    ),
   ],
   "rule-of-three": [
     choice(
@@ -360,6 +367,13 @@ const POOLS: Record<string, ConceptProblem[]> = {
     numeric("Se 2 kg custam R$ 10, quanto custam 4 kg (mesmo preço por kg)?", 20, "Dobro da massa → dobro do preço: R$ 20."),
     numeric("5 livros custam R$ 50. Quanto custa 1 livro (R$)?", 10, "50 ÷ 5 = 10."),
     numeric("3 metros de tecido custam R$ 24. Quanto custam 5 m?", 40, "8 reais/m × 5 = 40.", 2),
+    choice(
+      "Uma receita usa 2 xícaras de farinha para 8 bolinhos. Para 12 bolinhos (mesma receita), precisa de…",
+      ["3 xícaras", "2 xícaras", "16 xícaras"],
+      0,
+      "Proporção: 8 bolinhos → 2 xícaras; 12 é 1,5×8 → 3 xícaras.",
+      2,
+    ),
   ],
   "logic-reasoning": [
     choice(
@@ -448,8 +462,12 @@ export function generateConceptProblemUnique(
   if (!pool?.length) return null;
 
   const pickRandom = (list: ConceptProblem[]): ConceptProblem | null => {
-    const available = list.filter((q) => !usedSignatures.has(conceptProblemSignature(q)));
-    if (!available.length) return null;
+    if (!list.length) return null;
+    let available = list.filter(
+      (q) => !usedSignatures.has(conceptProblemSignature(q)),
+    );
+    // Menos questões que o tamanho da sessão: permite repetir enunciado.
+    if (!available.length) available = list;
     return available[randInt(0, available.length - 1)]!;
   };
 

@@ -7,7 +7,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useMemo } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { AuthProvider, useAuthContext } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
+import { ForceThemeScope, useTheme } from "../context/ThemeContext";
+import { getThemeColors } from "../theme/palettes";
 import { DashboardScreen } from "../screens/DashboardScreen";
 import { ExerciseScreen } from "../screens/ExerciseScreen";
 import { LearningPathScreen } from "../screens/LearningPathScreen";
@@ -22,7 +23,9 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootStack() {
   const { uid, demo, loading } = useAuthContext();
-  const { colors } = useTheme();
+  const theme = useTheme();
+  /** Login e carregamento inicial: sempre tema claro. */
+  const colors = uid ? theme.colors : getThemeColors("light");
   const shouldShowLogin = !uid;
 
   const screenOptions = useMemo(
@@ -43,16 +46,7 @@ function RootStack() {
     [colors],
   );
 
-  if (!demo && loading && !uid) {
-    return (
-      <View style={[styles.center, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.muted, { color: colors.muted }]}>Carregando...</Text>
-      </View>
-    );
-  }
-
-  return (
+  const stack = (
     <Stack.Navigator screenOptions={screenOptions}>
       {shouldShowLogin ? (
         <Stack.Screen
@@ -80,10 +74,29 @@ function RootStack() {
       )}
     </Stack.Navigator>
   );
+
+  if (!demo && loading && !uid) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.bg }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.muted, { color: colors.muted }]}>Carregando...</Text>
+      </View>
+    );
+  }
+
+  if (shouldShowLogin) {
+    return <ForceThemeScope mode="light">{stack}</ForceThemeScope>;
+  }
+
+  return stack;
 }
 
 function ThemedNavigation() {
-  const { colors, isDark } = useTheme();
+  const { uid } = useAuthContext();
+  const theme = useTheme();
+  const onLoginFlow = !uid;
+  const colors = onLoginFlow ? getThemeColors("light") : theme.colors;
+  const isDark = onLoginFlow ? false : theme.isDark;
 
   const navTheme = useMemo(() => {
     const base = isDark ? DarkTheme : DefaultTheme;

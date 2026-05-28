@@ -96,3 +96,33 @@ export function useTheme(): ThemeContextValue {
   }
   return ctx;
 }
+
+/** Sobrescreve o tema efetivo em uma subárvore (ex.: login sempre claro). */
+export function ForceThemeScope({
+  mode,
+  children,
+}: {
+  mode: ResolvedThemeMode;
+  children: ReactNode;
+}) {
+  const parent = useTheme();
+  const colors = useMemo(() => getThemeColors(mode), [mode]);
+  const layout = useMemo(() => createLayout(colors), [colors]);
+  const cardShadow = useMemo(() => createCardShadow(colors), [colors]);
+
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      ...parent,
+      resolvedMode: mode,
+      isDark: mode === "dark",
+      colors,
+      layout,
+      cardShadow,
+    }),
+    [parent, mode, colors, layout, cardShadow],
+  );
+
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
+}

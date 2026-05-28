@@ -25,7 +25,7 @@ const Logo = require("../../assets/mathning_sem_fundo.png");
 type AuthMode = "signIn" | "signUp";
 
 export default function LoginScreen() {
-  const { colors, cardShadow, isDark } = useTheme();
+  const { colors, cardShadow } = useTheme();
   const styles = useMemo(
     () => createLoginStyles(colors, cardShadow),
     [colors, cardShadow],
@@ -129,10 +129,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={colors.bg}
-      />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
       <ScreenBackground style={styles.flex}>
         <KeyboardAvoidingView
           style={styles.keyboard}
