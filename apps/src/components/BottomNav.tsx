@@ -11,7 +11,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 type TabKey = keyof Pick<
   RootStackParamList,
-  "Dashboard" | "LearningPath" | "Teoria" | "Performance" | "Profile"
+  "Dashboard" | "LearningPath" | "Teoria" | "Profile"
 >;
 
 type TabItem =
@@ -38,13 +38,6 @@ const TABS: TabItem[] = [
     iconActive: "document-text",
   },
   { key: "LearningPath", label: "Trilha", kind: "icon", icon: "book-outline", iconActive: "book" },
-  {
-    key: "Performance",
-    label: "Desemp.",
-    kind: "icon",
-    icon: "bar-chart-outline",
-    iconActive: "bar-chart",
-  },
   { key: "Profile", label: "Perfil", kind: "profile" },
 ];
 

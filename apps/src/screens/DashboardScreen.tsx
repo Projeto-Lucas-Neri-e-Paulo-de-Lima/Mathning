@@ -17,6 +17,8 @@ import {
   Text,
   View,
 } from "react-native";
+import { SuccessRateLineChart } from "../components/charts/SuccessRateLineChart";
+import { WeeklyXpChart } from "../components/charts/WeeklyXpChart";
 import { BottomNav } from "../components/BottomNav";
 import { ProfileAvatar } from "../components/ProfileAvatar";
 import { useAuthContext } from "../context/AuthContext";
@@ -25,6 +27,21 @@ import type { RootStackParamList } from "../navigation/types";
 import { colors, radius } from "../theme/colors";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+function weekBarsFromProgress(totalXp: number, lastActiveDate: string): number[] {
+  const days = [0, 0, 0, 0, 0, 0, 0];
+  let idx = 0;
+  if (lastActiveDate) {
+    const d = new Date(`${lastActiveDate}T12:00:00`);
+    const w = d.getDay();
+    idx = w === 0 ? 6 : w - 1;
+  } else {
+    const w = new Date().getDay();
+    idx = w === 0 ? 6 : w - 1;
+  }
+  days[idx] = Math.min(80, Math.max(0, totalXp));
+  return days;
+}
 
 const cardShadow = Platform.select({
   ios: {
@@ -91,6 +108,20 @@ export function DashboardScreen() {
     totalAnswers > 0
       ? Math.round((progress.stats.correct / totalAnswers) * 100)
       : 0;
+  const wrongPct =
+    totalAnswers > 0
+      ? Math.round((progress.stats.wrong / totalAnswers) * 100)
+      : 0;
+  const weekValues = weekBarsFromProgress(progress.xp, progress.lastActiveDate);
+  const linePoints = [0, 0, 0, rate];
+  const lineLabels = ["Jan", "Fev", "Mar", "Abr"];
+  const tips = [
+    "Continue praticando diariamente para manter sua sequência",
+    "Revise lições anteriores para reforçar o aprendizado",
+    rate >= 60
+      ? "Sua taxa de acerto está ótima! Mantenha o ritmo"
+      : "Foque nas lições com mais erros para subir sua taxa",
+  ];
 
   return (
     <View style={styles.shell}>
@@ -207,14 +238,33 @@ export function DashboardScreen() {
         </View>
 
         <View style={[styles.card, cardShadow]}>
-          <Text style={styles.h2}>Estatísticas de hoje</Text>
+          <View style={styles.cardHead}>
+            <Ionicons name="ribbon-outline" size={22} color={colors.primary} />
+            <Text style={styles.h2}>Seu desempenho</Text>
+          </View>
+          <View style={styles.metricsRow}>
+            <View style={[styles.metricCell, { backgroundColor: colors.metricBlueBg }]}>
+              <Text style={styles.metricLabel}>Nível</Text>
+              <Text style={[styles.metricVal, { color: colors.metricBlueText }]}>
+                {currentLevel}
+              </Text>
+            </View>
+            <View style={[styles.metricCell, { backgroundColor: colors.metricPurpleBg }]}>
+              <Text style={styles.metricLabel}>XP total</Text>
+              <Text style={[styles.metricVal, { color: colors.primary }]}>{progress.xp}</Text>
+            </View>
+            <View style={[styles.metricCell, { backgroundColor: colors.metricGreenBg }]}>
+              <Text style={styles.metricLabel}>Taxa</Text>
+              <Text style={[styles.metricVal, { color: colors.success }]}>{rate}%</Text>
+            </View>
+          </View>
           <View style={styles.statsRow}>
             <View style={styles.statCol}>
               <View style={[styles.statIconBg, { backgroundColor: colors.streakBg }]}>
                 <Ionicons name="pulse-outline" size={22} color={colors.streak} />
               </View>
               <Text style={styles.statNum}>{progress.streak ?? 0}</Text>
-              <Text style={styles.statLabel}>Dia de sequência</Text>
+              <Text style={styles.statLabel}>Sequência</Text>
             </View>
             <View style={styles.statCol}>
               <View style={[styles.statIconBg, { backgroundColor: colors.successBg }]}>
@@ -231,10 +281,71 @@ export function DashboardScreen() {
               <Text style={styles.statLabel}>Erros</Text>
             </View>
           </View>
-          <View style={styles.rateRow}>
-            <Text style={styles.muted}>Taxa de acerto</Text>
-            <Text style={styles.rateVal}>{rate}%</Text>
+        </View>
+
+        <View style={[styles.card, cardShadow]}>
+          <View style={styles.cardHead}>
+            <Ionicons name="calendar-outline" size={22} color={colors.primary} />
+            <Text style={styles.h2}>Atividade semanal</Text>
           </View>
+          <WeeklyXpChart values={weekValues} />
+        </View>
+
+        <View style={[styles.card, cardShadow]}>
+          <View style={styles.cardHead}>
+            <Ionicons name="trending-up" size={22} color={colors.success} />
+            <Text style={styles.h2}>Evolução da taxa de acerto</Text>
+          </View>
+          <SuccessRateLineChart points={linePoints} labels={lineLabels} />
+        </View>
+
+        <View style={[styles.card, cardShadow]}>
+          <View style={styles.cardHead}>
+            <Ionicons name="locate-outline" size={22} color={colors.primary} />
+            <Text style={styles.h2}>Estatísticas detalhadas</Text>
+          </View>
+          <View style={styles.detailOk}>
+            <View style={styles.detailIconWrap}>
+              <Ionicons name="checkmark" size={20} color="#fff" />
+            </View>
+            <View style={styles.detailMid}>
+              <Text style={styles.detailLbl}>Total de acertos</Text>
+              <Text style={styles.detailNum}>{progress.stats.correct}</Text>
+            </View>
+            <View style={styles.detailRight}>
+              <Text style={styles.detailSmall}>do total</Text>
+              <Text style={styles.detailPctOk}>{rate}%</Text>
+            </View>
+          </View>
+          <View style={styles.detailBad}>
+            <View style={[styles.detailIconWrap, styles.detailIconBad]}>
+              <Ionicons name="close" size={20} color="#fff" />
+            </View>
+            <View style={styles.detailMid}>
+              <Text style={styles.detailLbl}>Total de erros</Text>
+              <Text style={styles.detailNum}>{progress.stats.wrong}</Text>
+            </View>
+            <View style={styles.detailRight}>
+              <Text style={styles.detailSmall}>do total</Text>
+              <Text style={styles.detailPctBad}>{wrongPct}%</Text>
+            </View>
+          </View>
+          <View style={styles.detailDivider} />
+          <Text style={styles.detailTotalFoot}>
+            Total de {totalAnswers} exercícios completados
+          </Text>
+        </View>
+
+        <View style={styles.tipsCard}>
+          <View style={styles.tipsHead}>
+            <Ionicons name="information-circle" size={22} color={colors.infoText} />
+            <Text style={styles.tipsTitle}>Dicas para melhorar</Text>
+          </View>
+          {tips.map((t, i) => (
+            <Text key={i} style={styles.tipLine}>
+              • {t}
+            </Text>
+          ))}
         </View>
       </ScrollView>
       <BottomNav navigation={navigation} route="Dashboard" />
@@ -340,12 +451,35 @@ const styles = StyleSheet.create({
   },
   xpHint: { color: colors.primary, fontSize: 13, fontWeight: "600" },
   muted: { color: colors.muted, fontSize: 14 },
+  cardHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
   h2: {
     fontSize: 17,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 0,
   },
+  metricsRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
+  metricCell: {
+    flex: 1,
+    borderRadius: 14,
+    padding: 12,
+    minHeight: 72,
+    justifyContent: "center",
+  },
+  metricLabel: {
+    fontSize: 10,
+    textTransform: "uppercase",
+    fontWeight: "700",
+    color: colors.muted,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  metricVal: { fontSize: 20, fontWeight: "800" },
   bold: { fontWeight: "700", color: colors.text },
   goalHeader: {
     flexDirection: "row",
@@ -396,15 +530,65 @@ const styles = StyleSheet.create({
   },
   statNum: { fontSize: 22, fontWeight: "800", color: colors.text },
   statLabel: { fontSize: 12, color: colors.muted, textAlign: "center" },
-  rateRow: {
+  detailOk: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: 12,
+    gap: 12,
+    backgroundColor: colors.successBg,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
   },
-  rateVal: { fontSize: 16, fontWeight: "700", color: colors.primary },
+  detailBad: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.errorBg,
+    borderRadius: 14,
+    padding: 14,
+  },
+  detailIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.success,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  detailIconBad: { backgroundColor: colors.error },
+  detailMid: { flex: 1 },
+  detailLbl: { fontSize: 13, color: colors.muted, marginBottom: 2 },
+  detailNum: { fontSize: 24, fontWeight: "800", color: colors.text },
+  detailRight: { alignItems: "flex-end" },
+  detailSmall: { fontSize: 12, color: colors.muted },
+  detailPctOk: { fontSize: 16, fontWeight: "700", color: colors.successDark },
+  detailPctBad: { fontSize: 16, fontWeight: "700", color: colors.errorDark },
+  detailDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginVertical: 14,
+  },
+  detailTotalFoot: {
+    textAlign: "center",
+    fontSize: 13,
+    color: colors.muted,
+    fontWeight: "500",
+  },
+  tipsCard: {
+    borderRadius: radius.card,
+    padding: 16,
+    backgroundColor: colors.infoBg,
+    borderWidth: 1,
+    borderColor: colors.infoBorder,
+  },
+  tipsHead: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
+  tipsTitle: { fontSize: 16, fontWeight: "700", color: colors.infoText },
+  tipLine: {
+    fontSize: 14,
+    color: colors.infoText,
+    lineHeight: 22,
+    marginBottom: 4,
+  },
   errorCard: {
     width: "88%",
     maxWidth: 460,

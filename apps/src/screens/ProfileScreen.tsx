@@ -68,7 +68,6 @@ export function ProfileScreen() {
   const profileTitle = demo
     ? "Visitante (demonstração)"
     : displayName || email || "Conta sem email";
-  const accountKind = demo ? "Modo demonstração" : "Conta Firebase";
   const uidLabel = uid ?? "—";
 
   async function handleRefresh() {
@@ -239,23 +238,6 @@ export function ProfileScreen() {
             <Text style={styles.warnTxt}>{error}</Text>
           </View>
         ) : null}
-
-        <Pressable
-          style={[styles.primaryBtn, refreshing && styles.btnDisabled]}
-          onPress={() => void handleRefresh()}
-          disabled={refreshing}
-          accessibilityRole="button"
-          accessibilityLabel="Atualizar progresso"
-        >
-          {refreshing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="refresh-outline" size={20} color="#fff" />
-              <Text style={styles.primaryBtnTxt}>Atualizar</Text>
-            </>
-          )}
-        </Pressable>
 
         <Pressable
           style={styles.secondaryBtn}
