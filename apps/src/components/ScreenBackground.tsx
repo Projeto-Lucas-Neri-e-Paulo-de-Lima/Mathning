@@ -4,35 +4,42 @@ import { useTheme } from "../context/ThemeContext";
 export function ScreenBackground({
   children,
   style,
+  edgeToEdge,
 }: {
   children: React.ReactNode;
   style?: ViewStyle;
+  /** Oculta blobs decorativos (ex.: hero roxo contínuo no Início). */
+  edgeToEdge?: boolean;
 }) {
   const { colors } = useTheme();
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }, style]}>
-      <View
-        style={[
-          styles.blob,
-          styles.blobTopRight,
-          { backgroundColor: colors.accentBlob },
-        ]}
-      />
-      <View
-        style={[
-          styles.blob,
-          styles.blobMidLeft,
-          { backgroundColor: colors.accentBlob },
-        ]}
-      />
-      <View
-        style={[
-          styles.blobSoft,
-          styles.blobBottom,
-          { backgroundColor: colors.accentBlobSoft },
-        ]}
-      />
+      {!edgeToEdge ? (
+        <>
+          <View
+            style={[
+              styles.blob,
+              styles.blobTopRight,
+              { backgroundColor: colors.accentBlob },
+            ]}
+          />
+          <View
+            style={[
+              styles.blob,
+              styles.blobMidLeft,
+              { backgroundColor: colors.accentBlob },
+            ]}
+          />
+          <View
+            style={[
+              styles.blobSoft,
+              styles.blobBottom,
+              { backgroundColor: colors.accentBlobSoft },
+            ]}
+          />
+        </>
+      ) : null}
       <View style={styles.content}>{children}</View>
     </View>
   );

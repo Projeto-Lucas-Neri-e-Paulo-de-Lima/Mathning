@@ -1,5 +1,6 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { StatusBar } from "expo-status-bar";
 import {
   DAILY_GOAL_EXERCISES,
   getLesson,
@@ -17,6 +18,8 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppButton } from "../components/AppButton";
 import { AppCard } from "../components/AppCard";
 import { SuccessRateLineChart } from "../components/charts/SuccessRateLineChart";
 import { WeeklyXpChart } from "../components/charts/WeeklyXpChart";
@@ -27,6 +30,7 @@ import { ScreenBackground } from "../components/ScreenBackground";
 import { useAuthContext } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useAppHeader } from "../hooks/useAppHeader";
+import { useBottomNavInset } from "../hooks/useBottomNavInset";
 import type { RootStackParamList } from "../navigation/types";
 import { radius } from "../theme/radius";
 import type { ColorTokens } from "../theme/tokens";
@@ -51,12 +55,10 @@ function weekBarsFromProgress(totalXp: number, lastActiveDate: string): number[]
 
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
-  useAppHeader(navigation, "Mathning", { showProfileButton: false });
+  const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
+  const bottomNavInset = useBottomNavInset();
   const { colors, layout, cardShadow } = useTheme();
-  const styles = useMemo(
-    () => createDashboardStyles(colors, layout),
-    [colors, layout],
-  );
   const {
     progress,
     loading,
@@ -67,6 +69,13 @@ export function DashboardScreen() {
     signOutUser,
     refreshProgress,
   } = useAuthContext();
+  const headerVariant =
+    !loading && !error && progress ? ("hero" as const) : ("default" as const);
+  useAppHeader(navigation, { variant: headerVariant });
+  const styles = useMemo(
+    () => createDashboardStyles(colors, layout, insets.top, bottomNavInset),
+    [colors, layout, insets.top, bottomNavInset],
+  );
   const [showDemoBanner, setShowDemoBanner] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -86,13 +95,12 @@ export function DashboardScreen() {
           <Ionicons name="warning-outline" size={28} color={colors.error} />
           <Text style={styles.errorTitle}>Erro ao carregar progresso</Text>
           <Text style={styles.err}>{error}</Text>
-          <Pressable
-            style={styles.secondaryBtn}
+          <AppButton
+            label="Voltar ao login"
+            variant="secondary"
             onPress={() => void signOutUser()}
-            accessibilityRole="button"
-          >
-            <Text style={styles.secondaryBtnTxt}>Voltar ao login</Text>
-          </Pressable>
+            style={styles.errorActionBtn}
+          />
         </View>
       </View>
     );
@@ -151,15 +159,17 @@ export function DashboardScreen() {
   const greetingName = displayName || (demo ? "Visitante" : "Estudante");
 
   return (
-    <ScreenBackground>
+    <ScreenBackground edgeToEdge>
+      {isFocused ? <StatusBar style="light" /> : null}
       <ScrollView
-        contentContainerStyle={layout.scroll}
+        contentContainerStyle={styles.scrollRoot}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => void handlePullRefresh()}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
+            tintColor={colors.textOnPrimary}
+            colors={[colors.textOnPrimary]}
+            progressBackgroundColor={colors.primary}
           />
         }
       >
@@ -200,6 +210,7 @@ export function DashboardScreen() {
           </View>
         </View>
 
+        <View style={layout.scrollBody}>
         {demo && showDemoBanner && (
           <View style={styles.banner}>
             <Ionicons name="warning-outline" size={22} color={colors.warning} />
@@ -237,24 +248,23 @@ export function DashboardScreen() {
               </Text>
             </View>
           </View>
-          <Pressable
-            style={styles.continuePrimaryBtn}
+          <AppButton
+            label="Continuar teoria"
+            variant="inverse"
+            icon="play"
+            iconSize={22}
             onPress={() => navigation.navigate("TheoryDetail", continueParams)}
-            accessibilityRole="button"
+            style={styles.continueBtnFirst}
             accessibilityLabel={`Continuar teoria: ${lessonLabel}`}
-          >
-            <Ionicons name="play" size={22} color={colors.primary} />
-            <Text style={styles.continuePrimaryBtnTxt}>Continuar teoria</Text>
-          </Pressable>
-          <Pressable
-            style={styles.continueSecondaryBtn}
+          />
+          <AppButton
+            label="Praticar agora"
+            variant="outline"
+            icon="barbell-outline"
             onPress={() => navigation.navigate("Exercise", continueParams)}
-            accessibilityRole="button"
+            style={styles.continueBtnSecond}
             accessibilityLabel={`Praticar: ${lessonLabel}`}
-          >
-            <Ionicons name="barbell-outline" size={18} color={colors.textOnPrimary} />
-            <Text style={styles.continueSecondaryBtnTxt}>Praticar agora</Text>
-          </Pressable>
+          />
         </View>
 
         <AppCard>
@@ -422,18 +432,32 @@ export function DashboardScreen() {
             </Text>
           ))}
         </View>
+        </View>
       </ScrollView>
       <BottomNav navigation={navigation} route="Dashboard" />
     </ScreenBackground>
   );
 }
 
-function createDashboardStyles(colors: ColorTokens, layout: ThemeLayout) {
+function createDashboardStyles(
+  colors: ColorTokens,
+  layout: ThemeLayout,
+  safeAreaTop: number,
+  bottomNavInset: number,
+) {
   return StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 8 },
+  scrollRoot: {
+    paddingBottom: bottomNavInset,
+  },
   heroBanner: {
-    ...layout.heroBanner,
-    marginBottom: 2,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingTop: safeAreaTop + 16,
+    paddingBottom: 22,
+    overflow: "hidden",
+    borderBottomLeftRadius: radius.hero,
+    borderBottomRightRadius: radius.hero,
   },
   heroRow: {
     flexDirection: "row",
@@ -530,37 +554,9 @@ function createDashboardStyles(colors: ColorTokens, layout: ThemeLayout) {
     color: colors.mutedOnPrimary,
     fontWeight: "600",
   },
-  continuePrimaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: colors.card,
-    paddingVertical: 14,
-    borderRadius: radius.btn,
-    zIndex: 1,
-  },
-  continuePrimaryBtnTxt: {
-    color: colors.primary,
-    fontWeight: "800",
-    fontSize: 16,
-  },
-  continueSecondaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: radius.btn,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.35)",
-    zIndex: 1,
-  },
-  continueSecondaryBtnTxt: {
-    color: colors.textOnPrimary,
-    fontWeight: "700",
-    fontSize: 15,
-  },
+  continueBtnFirst: { marginTop: 0, zIndex: 1 },
+  continueBtnSecond: { marginTop: 10, zIndex: 1 },
+  errorActionBtn: { marginTop: 8, alignSelf: "stretch" },
   levelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -732,18 +728,5 @@ function createDashboardStyles(colors: ColorTokens, layout: ThemeLayout) {
     textAlign: "center",
   },
   err: { color: colors.error, textAlign: "center", lineHeight: 20 },
-  secondaryBtn: {
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.btn,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  secondaryBtnTxt: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
   });
 }

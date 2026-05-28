@@ -11,14 +11,15 @@ import {
   ActivityIndicator,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { AppButton } from "../components/AppButton";
 import { AppCard } from "../components/AppCard";
 import { AvatarPickerModal } from "../components/AvatarPickerModal";
 import { BottomNav } from "../components/BottomNav";
+import { ScreenScrollView } from "../components/ScreenScrollView";
 import { ScreenBackground } from "../components/ScreenBackground";
 import { ProfileAvatar } from "../components/ProfileAvatar";
 import { ThemeSettingsCard } from "../components/ThemeSettingsCard";
@@ -41,7 +42,7 @@ function formatDate(iso: string): string {
 
 export function ProfileScreen() {
   const navigation = useNavigation<Nav>();
-  useAppHeader(navigation, "Perfil", { showProfileButton: false });
+  useAppHeader(navigation);
   const { colors, layout, cardShadow } = useTheme();
   const styles = useMemo(
     () => createProfileStyles(colors, layout, cardShadow),
@@ -95,17 +96,12 @@ export function ProfileScreen() {
           <Ionicons name="warning-outline" size={28} color={colors.error} />
           <Text style={styles.errorTitle}>Não foi possível carregar</Text>
           <Text style={styles.muted}>{error}</Text>
-          <Pressable
-            style={styles.primaryBtn}
+          <AppButton
+            label="Tentar novamente"
             onPress={() => void handleRefresh()}
-            disabled={refreshing}
-          >
-            {refreshing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryBtnTxt}>Tentar novamente</Text>
-            )}
-          </Pressable>
+            loading={refreshing}
+            style={styles.actionBtn}
+          />
         </View>
       </View>
     );
@@ -148,8 +144,8 @@ export function ProfileScreen() {
 
   return (
     <ScreenBackground>
-      <ScrollView
-        contentContainerStyle={layout.scroll}
+      <ScreenScrollView
+        withBottomNav
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -251,22 +247,15 @@ export function ProfileScreen() {
           </View>
         ) : null}
 
-        <Pressable
-          style={styles.secondaryBtn}
+        <AppButton
+          label={demo ? "Encerrar demonstração" : "Sair da conta"}
+          variant={demo ? "secondary" : "danger"}
+          icon="log-out-outline"
           onPress={() => void signOutUser()}
-          accessibilityRole="button"
+          style={styles.actionBtn}
           accessibilityLabel={demo ? "Encerrar demonstração" : "Sair da conta"}
-        >
-          <Ionicons
-            name="log-out-outline"
-            size={20}
-            color={demo ? colors.text : colors.error}
-          />
-          <Text style={[styles.secondaryBtnTxt, !demo && styles.signOutTxt]}>
-            {demo ? "Encerrar demonstração" : "Sair da conta"}
-          </Text>
-        </Pressable>
-      </ScrollView>
+        />
+      </ScreenScrollView>
 
       <BottomNav navigation={navigation} route="Profile" />
 
@@ -389,29 +378,7 @@ function createProfileStyles(
     borderRadius: radius.sm,
   },
   warnTxt: { color: colors.errorDark, fontSize: 13 },
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: radius.btn,
-  },
-  primaryBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  secondaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: radius.btn,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  secondaryBtnTxt: { fontWeight: "700", fontSize: 15, color: colors.text },
-  signOutTxt: { color: colors.error },
+  actionBtn: { marginTop: 0 },
   btnDisabled: { opacity: 0.7 },
   muted: { color: colors.muted, fontSize: 14, marginTop: 8 },
   });

@@ -26,15 +26,18 @@ function RootStack() {
 
   const screenOptions = useMemo(
     () => ({
+      title: "",
+      headerTitle: "",
+      headerBackVisible: false,
+      headerTransparent: true,
       headerShadowVisible: false,
       headerStyle: {
-        backgroundColor: colors.header,
+        backgroundColor: "transparent",
+      },
+      contentStyle: {
+        backgroundColor: colors.bg,
       },
       headerTintColor: colors.text,
-      headerTitleStyle: {
-        fontWeight: "700" as const,
-        color: colors.text,
-      },
     }),
     [colors],
   );
@@ -58,36 +61,12 @@ function RootStack() {
         />
       ) : (
         <>
-          <Stack.Screen
-            name="Dashboard"
-            component={DashboardScreen}
-            options={{ title: "Mathning" }}
-          />
-          <Stack.Screen
-            name="Teoria"
-            component={TheoryHubScreen}
-            options={{ title: "Teoria" }}
-          />
-          <Stack.Screen
-            name="LearningPath"
-            component={LearningPathScreen}
-            options={{ title: "Trilha" }}
-          />
-          <Stack.Screen
-            name="TheoryDetail"
-            component={TheoryScreen}
-            options={{ title: "Teoria" }}
-          />
-          <Stack.Screen
-            name="Exercise"
-            component={ExerciseScreen}
-            options={{ title: "Prática" }}
-          />
-          <Stack.Screen
-            name="Profile"
-            component={ProfileScreen}
-            options={{ title: "Perfil" }}
-          />
+          <Stack.Screen name="Dashboard" component={DashboardScreen} />
+          <Stack.Screen name="Teoria" component={TheoryHubScreen} />
+          <Stack.Screen name="LearningPath" component={LearningPathScreen} />
+          <Stack.Screen name="TheoryDetail" component={TheoryScreen} />
+          <Stack.Screen name="Exercise" component={ExerciseScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
         </>
       )}
     </Stack.Navigator>

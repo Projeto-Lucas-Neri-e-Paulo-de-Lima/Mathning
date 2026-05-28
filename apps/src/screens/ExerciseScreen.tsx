@@ -23,7 +23,6 @@ import {
 } from "@mathning/shared";
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -31,6 +30,9 @@ import {
 } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuthContext } from "../context/AuthContext";
+import { AppButton } from "../components/AppButton";
+import { ScreenScrollView } from "../components/ScreenScrollView";
+import { useAppHeader } from "../hooks/useAppHeader";
 import { useTheme } from "../context/ThemeContext";
 import type { ColorTokens } from "../theme/tokens";
 import { markDemoPracticeCompleted, recordDemoExercise } from "../lib/demoProgress";
@@ -85,6 +87,8 @@ export function ExerciseScreen() {
   const styles = useMemo(() => createExerciseStyles(colors), [colors]);
   const { progress, db, uid, demo, updateLocalDemo, refreshProgress } =
     useAuthContext();
+
+  useAppHeader(navigation);
 
   const lesson = getLesson(moduleId, lessonId);
   const completed = progress?.completedLessonIds ?? [];
@@ -229,7 +233,7 @@ export function ExerciseScreen() {
             : "Continue praticando — a teoria ajuda muito.";
 
     return (
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScreenScrollView contentStyle={styles.scrollExtra}>
         <Text style={styles.eyebrow}>Prática concluída</Text>
         <Text style={styles.h1}>{lesson.title}</Text>
         <View style={styles.card}>
@@ -241,14 +245,14 @@ export function ExerciseScreen() {
           </View>
           <Text style={styles.summaryPct}>{pct}% de aproveitamento</Text>
           <Text style={styles.summaryMsg}>{message}</Text>
-          <Pressable style={styles.primaryBtn} onPress={resetSession}>
-            <Text style={styles.primaryBtnTxt}>Praticar novamente</Text>
-          </Pressable>
-          <Pressable style={styles.secondaryBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.secondaryBtnTxt}>Voltar à trilha</Text>
-          </Pressable>
+          <AppButton label="Praticar novamente" onPress={resetSession} />
+          <AppButton
+            label="Voltar à trilha"
+            variant="secondary"
+            onPress={() => navigation.goBack()}
+          />
         </View>
-      </ScrollView>
+      </ScreenScrollView>
     );
   }
 
@@ -275,7 +279,7 @@ export function ExerciseScreen() {
       : explainConceptSolution(practice.problem);
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll}>
+    <ScreenScrollView contentStyle={styles.scrollExtra}>
       <Text style={styles.eyebrow}>Prática · {lesson.title}</Text>
       <Text style={styles.progress}>
         Questão {questionNum} de {PRACTICE_QUESTIONS_PER_SESSION}
@@ -327,13 +331,12 @@ export function ExerciseScreen() {
           />
         )}
 
-        <Pressable
-          style={[styles.primaryBtn, (!canSubmit || busy) && styles.disabled]}
-          disabled={!canSubmit}
+        <AppButton
+          label="Verificar"
           onPress={() => void handleSubmit()}
-        >
-          <Text style={styles.primaryBtnTxt}>Verificar</Text>
-        </Pressable>
+          disabled={!canSubmit}
+          loading={busy}
+        />
         {feedback === "ok" && (
           <Text style={styles.ok}>Muito bem! +XP</Text>
         )}
@@ -347,13 +350,13 @@ export function ExerciseScreen() {
           Acertos nesta sessão: {correctCount} · Nível {tier}
         </Text>
       </View>
-    </ScrollView>
+    </ScreenScrollView>
   );
 }
 
 function createExerciseStyles(colors: ColorTokens) {
   return StyleSheet.create({
-  scroll: { padding: 20, paddingBottom: 40, backgroundColor: colors.bg, flexGrow: 1 },
+  scrollExtra: { paddingBottom: 40, backgroundColor: colors.bg, flexGrow: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   eyebrow: {
     fontSize: 11,
@@ -408,22 +411,6 @@ function createExerciseStyles(colors: ColorTokens) {
     backgroundColor: colors.inputBg,
     color: colors.text,
   },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  primaryBtnTxt: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  secondaryBtn: {
-    marginTop: 10,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  secondaryBtnTxt: { color: colors.text, fontWeight: "600", fontSize: 16 },
   disabled: { opacity: 0.6 },
   ok: { marginTop: 12, color: colors.successDark, fontWeight: "600" },
   fbBad: { marginTop: 12 },

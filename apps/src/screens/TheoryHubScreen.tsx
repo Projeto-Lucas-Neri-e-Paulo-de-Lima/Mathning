@@ -6,13 +6,13 @@ import { useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { AppCard } from "../components/AppCard";
 import { BottomNav } from "../components/BottomNav";
+import { ScreenScrollView } from "../components/ScreenScrollView";
 import { LessonIconCircle } from "../components/LessonIconCircle";
 import { ScreenBackground } from "../components/ScreenBackground";
 import { getLessonTopicVisual } from "../constants/lessonIcons";
@@ -32,7 +32,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
  */
 export function TheoryHubScreen() {
   const navigation = useNavigation<Nav>();
-  useAppHeader(navigation, "Teoria", { showProfileButton: false });
+  useAppHeader(navigation);
   const { colors, layout } = useTheme();
   const styles = useMemo(
     () => createTheoryHubStyles(colors, layout),
@@ -55,7 +55,7 @@ export function TheoryHubScreen() {
 
   return (
     <ScreenBackground>
-      <ScrollView contentContainerStyle={layout.scroll}>
+      <ScreenScrollView withBottomNav>
         <View style={styles.heroBanner}>
           <View style={[layout.heroBlob, { top: -24, right: -16 }]} />
           <View style={styles.heroTop}>
@@ -211,7 +211,7 @@ export function TheoryHubScreen() {
             </View>
           );
         })}
-      </ScrollView>
+      </ScreenScrollView>
       <BottomNav navigation={navigation} route="Teoria" />
     </ScreenBackground>
   );

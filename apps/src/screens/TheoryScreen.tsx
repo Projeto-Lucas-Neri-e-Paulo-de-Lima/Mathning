@@ -13,11 +13,11 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { AppButton } from "../components/AppButton";
 import { ConceptTheoryView } from "../components/ConceptTheoryView";
 import { getLessonTopicVisual } from "../constants/lessonIcons";
 import { useAuthContext } from "../context/AuthContext";
@@ -26,6 +26,7 @@ import { markDemoLessonDone } from "../lib/demoProgress";
 import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
 import { ScreenBackground } from "../components/ScreenBackground";
+import { ScreenScrollView } from "../components/ScreenScrollView";
 import { useTheme } from "../context/ThemeContext";
 import { radius } from "../theme/radius";
 import type { ColorTokens } from "../theme/tokens";
@@ -337,7 +338,7 @@ export function TheoryScreen() {
     : false;
   const [activeTab, setActiveTab] = useState<TheoryTab>("concept");
 
-  useAppHeader(navigation, lesson?.title ?? "Teoria");
+  useAppHeader(navigation);
 
   useEffect(() => {
     if (!lesson || !progress || !unlocked) return;
@@ -396,9 +397,12 @@ export function TheoryScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.muted}>Este assunto ainda está bloqueado.</Text>
-        <Pressable style={styles.btn} onPress={() => navigation.goBack()}>
-          <Text style={styles.btnTxt}>Voltar</Text>
-        </Pressable>
+        <AppButton
+          label="Voltar"
+          variant="secondary"
+          onPress={() => navigation.goBack()}
+          style={styles.inlineActionBtn}
+        />
       </View>
     );
   }
@@ -431,7 +435,7 @@ export function TheoryScreen() {
 
   return (
     <ScreenBackground>
-      <ScrollView contentContainerStyle={layout.scroll}>
+      <ScreenScrollView>
         <View style={[styles.hero, { backgroundColor: topicVisual.color }]}>
           <View style={styles.heroTitleRow}>
             <Ionicons name={topicVisual.icon} size={20} color="#fff" />
@@ -690,15 +694,13 @@ export function TheoryScreen() {
           <Text style={styles.practiceSub}>
             Agora que você entendeu o conceito, pratique com exercícios interativos.
           </Text>
-          <Pressable
-            style={styles.primaryBtn}
+          <AppButton
+            label="Ir para Exercícios"
+            icon="chevron-forward"
             onPress={() => navigation.navigate("Exercise", { moduleId, lessonId })}
-            accessibilityRole="button"
+            style={styles.ctaBtn}
             accessibilityLabel="Ir para a prática deste assunto"
-          >
-            <Text style={styles.primaryBtnTxt}>Ir para Exercícios</Text>
-            <Ionicons name="chevron-forward" size={18} color="#fff" />
-          </Pressable>
+          />
         </View>
 
         <View style={[styles.card, cardShadow]}>
@@ -713,15 +715,15 @@ export function TheoryScreen() {
               <Text style={styles.ok}>Assunto concluído na trilha</Text>
             </View>
           ) : (
-            <Pressable
-              style={styles.secondaryBtn}
+            <AppButton
+              label="Marcar como concluído"
+              variant="secondary"
               onPress={() => void handleCompleteLesson()}
-            >
-              <Text style={styles.secondaryBtnTxt}>Marcar como concluído</Text>
-            </Pressable>
+              style={styles.ctaBtn}
+            />
           )}
         </View>
-      </ScrollView>
+      </ScreenScrollView>
     </ScreenBackground>
   );
 }
@@ -995,25 +997,8 @@ function createTheoryStyles(
   },
   practiceTitle: { fontSize: 17, fontWeight: "800", color: colors.text, marginBottom: 8 },
   practiceSub: { fontSize: 14, color: colors.muted, marginBottom: 12 },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 6,
-  },
-  primaryBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
-  secondaryBtn: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 12,
-    borderRadius: radius.btn,
-    alignItems: "center",
-  },
-  secondaryBtnTxt: { color: colors.text, fontWeight: "700" },
+  ctaBtn: { marginTop: 0 },
+  inlineActionBtn: { marginTop: 8, alignSelf: "center" },
   small: { fontSize: 13, color: colors.muted, lineHeight: 19 },
   doneRow: {
     flexDirection: "row",
@@ -1023,13 +1008,5 @@ function createTheoryStyles(
   },
   ok: { fontWeight: "700", color: colors.successDark },
   muted: { color: colors.muted, marginBottom: 12 },
-  btn: {
-    marginTop: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-  },
-  btnTxt: { color: "#fff", fontWeight: "600" },
   });
 }

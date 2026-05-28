@@ -5,13 +5,14 @@ import { useMemo, useState } from "react";
 import {
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { AppButton } from "./AppButton";
 import { AppCard } from "./AppCard";
 import { ScreenBackground } from "./ScreenBackground";
+import { ScreenScrollView } from "./ScreenScrollView";
 import type { LessonTopicVisual } from "../constants/lessonIcons";
 import { useTheme } from "../context/ThemeContext";
 import type { RootStackParamList } from "../navigation/types";
@@ -53,7 +54,7 @@ export function ConceptTheoryView({
 
   return (
     <ScreenBackground>
-      <ScrollView contentContainerStyle={layout.scroll}>
+      <ScreenScrollView>
         <AppCard variant="accent" style={styles.hero}>
           <View style={styles.heroTop}>
             <View
@@ -174,13 +175,12 @@ export function ConceptTheoryView({
           <Text style={styles.practiceSub}>
             Reforce com exercícios interativos deste assunto.
           </Text>
-          <Pressable
-            style={styles.primaryBtn}
+          <AppButton
+            label="Ir para Exercícios"
+            icon="chevron-forward"
             onPress={() => navigation.navigate("Exercise", { moduleId, lessonId })}
-          >
-            <Text style={styles.primaryBtnTxt}>Ir para Exercícios</Text>
-            <Ionicons name="chevron-forward" size={18} color="#fff" />
-          </Pressable>
+            style={styles.ctaBtn}
+          />
         </AppCard>
 
         <AppCard>
@@ -195,12 +195,15 @@ export function ConceptTheoryView({
               <Text style={styles.ok}>Assunto concluído na trilha</Text>
             </View>
           ) : (
-            <Pressable style={styles.secondaryBtn} onPress={onComplete}>
-              <Text style={styles.secondaryBtnTxt}>Marcar como concluído</Text>
-            </Pressable>
+            <AppButton
+              label="Marcar como concluído"
+              variant="secondary"
+              onPress={onComplete}
+              style={styles.ctaBtn}
+            />
           )}
         </AppCard>
-      </ScrollView>
+      </ScreenScrollView>
     </ScreenBackground>
   );
 }
@@ -302,26 +305,8 @@ function createConceptTheoryStyles(colors: ColorTokens) {
   practiceCard: {},
   practiceTitle: { fontSize: 17, fontWeight: "800", color: colors.text, marginBottom: 6 },
   practiceSub: { fontSize: 13, color: colors.muted, marginBottom: 12 },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 6,
-  },
-  primaryBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  ctaBtn: { marginTop: 0 },
   small: { fontSize: 13, color: colors.muted, lineHeight: 19 },
-  secondaryBtn: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 12,
-    borderRadius: radius.btn,
-    alignItems: "center",
-  },
-  secondaryBtnTxt: { color: colors.text, fontWeight: "700" },
   doneRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
   ok: { fontWeight: "700", color: colors.successDark },
   });

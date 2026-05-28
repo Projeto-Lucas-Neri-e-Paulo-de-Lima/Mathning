@@ -5,13 +5,13 @@ import { useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { AppCard } from "../components/AppCard";
 import { BottomNav } from "../components/BottomNav";
+import { ScreenScrollView } from "../components/ScreenScrollView";
 import { ScreenBackground } from "../components/ScreenBackground";
 import { LessonIconCircle } from "../components/LessonIconCircle";
 import { useAuthContext } from "../context/AuthContext";
@@ -26,7 +26,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export function LearningPathScreen() {
   const navigation = useNavigation<Nav>();
-  useAppHeader(navigation, "Trilha", { showProfileButton: false });
+  useAppHeader(navigation);
   const { colors, layout, cardShadow } = useTheme();
   const styles = useMemo(
     () => createLearningPathStyles(colors, cardShadow),
@@ -48,7 +48,7 @@ export function LearningPathScreen() {
 
   return (
     <ScreenBackground>
-      <ScrollView contentContainerStyle={layout.scroll}>
+      <ScreenScrollView withBottomNav>
         <View style={styles.pageIntro}>
           <Text style={layout.pageTitle}>Trilha de aprendizado</Text>
           <Text style={layout.pageSub}>
@@ -168,7 +168,7 @@ export function LearningPathScreen() {
             </View>
           );
         })}
-      </ScrollView>
+      </ScreenScrollView>
       <BottomNav navigation={navigation} route="LearningPath" />
     </ScreenBackground>
   );

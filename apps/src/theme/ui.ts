@@ -26,6 +26,12 @@ export function createLayout(colors: ColorTokens) {
       paddingBottom: 32,
       gap: 16,
     },
+    /** Conteúdo abaixo de um hero full-bleed (padding lateral + espaçamento entre blocos). */
+    scrollBody: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      gap: 16,
+    },
     scrollTight: {
       padding: 20,
       paddingBottom: 28,
