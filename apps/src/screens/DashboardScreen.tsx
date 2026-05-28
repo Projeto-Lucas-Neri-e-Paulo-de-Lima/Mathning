@@ -2,7 +2,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import {
-  DAILY_GOAL_EXERCISES,
   getLesson,
   getModuleById,
   xpToNextLevel,
@@ -21,6 +20,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppButton } from "../components/AppButton";
 import { AppCard } from "../components/AppCard";
+import { DailyGoalStreakCard } from "../components/DailyGoalStreakCard";
 import { SuccessRateLineChart } from "../components/charts/SuccessRateLineChart";
 import { WeeklyXpChart } from "../components/charts/WeeklyXpChart";
 import { BottomNav } from "../components/BottomNav";
@@ -121,8 +121,6 @@ export function DashboardScreen() {
   const today = new Date().toISOString().slice(0, 10);
   const daily =
     progress.dailyExerciseDate === today ? progress.dailyExerciseCount ?? 0 : 0;
-  const dailyPct = Math.min(100, Math.round((daily / DAILY_GOAL_EXERCISES) * 100));
-  const goalMet = daily >= DAILY_GOAL_EXERCISES;
   const modTitle =
     getModuleById(progress.currentModuleId)?.title ?? progress.currentModuleId;
   const currentLesson = getLesson(
@@ -296,31 +294,10 @@ export function DashboardScreen() {
           </View>
         </AppCard>
 
-        <AppCard variant="tint">
-          <View style={styles.goalHeader}>
-            <View style={styles.goalIconBox}>
-              <Ionicons name="locate-outline" size={22} color={colors.success} />
-            </View>
-            <View style={styles.goalTitles}>
-              <Text style={layout.h2}>Meta de hoje</Text>
-              <Text style={layout.muted}>
-                {daily} de {DAILY_GOAL_EXERCISES} exercícios
-              </Text>
-            </View>
-            {goalMet && (
-              <Ionicons name="checkmark-circle" size={28} color={colors.success} />
-            )}
-          </View>
-          <View style={styles.bar}>
-            <View style={[styles.barFill, styles.barGreen, { width: `${dailyPct}%` }]} />
-          </View>
-          {goalMet && (
-            <View style={styles.goalSuccessRow}>
-              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-              <Text style={styles.goalSuccessTxt}>Parabéns! Meta de hoje concluída!</Text>
-            </View>
-          )}
-        </AppCard>
+        <DailyGoalStreakCard
+          daily={daily}
+          streak={progress.streak ?? 0}
+        />
 
         <AppCard>
           <View style={layout.cardHead}>
@@ -586,7 +563,6 @@ function createDashboardStyles(
     backgroundColor: colors.primary,
     borderRadius: radius.pill,
   },
-  barGreen: { backgroundColor: colors.success },
   levelFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -613,28 +589,6 @@ function createDashboardStyles(
     marginBottom: 4,
   },
   metricVal: { fontSize: 20, fontWeight: "800" },
-  goalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
-  },
-  goalIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.successBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  goalTitles: { flex: 1 },
-  goalSuccessRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 8,
-  },
-  goalSuccessTxt: { color: colors.successDark, fontSize: 14, fontWeight: "600" },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",

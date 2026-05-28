@@ -21,6 +21,7 @@ import {
   type ConceptChoiceProblem,
   type ConceptProblem,
 } from "@mathning/shared";
+import { Ionicons } from "@expo/vector-icons";
 import {
   Pressable,
   StyleSheet,
@@ -31,11 +32,14 @@ import {
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuthContext } from "../context/AuthContext";
 import { AppButton } from "../components/AppButton";
+import { PracticeFeedbackBanner } from "../components/PracticeFeedbackBanner";
 import { ScreenScrollView } from "../components/ScreenScrollView";
 import { useAppHeader } from "../hooks/useAppHeader";
 import { useTheme } from "../context/ThemeContext";
 import type { ColorTokens } from "../theme/tokens";
 import { markDemoPracticeCompleted, recordDemoExercise } from "../lib/demoProgress";
+import { triggerPracticeFeedback } from "../lib/practiceHaptics";
+import { radius } from "../theme/radius";
 import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
 
@@ -157,6 +161,7 @@ export function ExerciseScreen() {
 
     setFeedback(ok ? "ok" : "bad");
     setBusy(true);
+    void triggerPracticeFeedback(ok);
 
     const streakAfter = ok ? sessionStreak + 1 : 0;
     const newCorrectCount = ok ? correctCount + 1 : correctCount;
@@ -271,7 +276,12 @@ export function ExerciseScreen() {
     : null;
   const canSubmit =
     !busy &&
+    feedback === "idle" &&
     (isChoice ? selectedChoice !== null : input.trim() !== "");
+
+  const progressPct = Math.round(
+    (questionNum / PRACTICE_QUESTIONS_PER_SESSION) * 100,
+  );
 
   const explanation =
     practice.mode === "arithmetic"
@@ -281,13 +291,24 @@ export function ExerciseScreen() {
   return (
     <ScreenScrollView contentStyle={styles.scrollExtra}>
       <Text style={styles.eyebrow}>Prática · {lesson.title}</Text>
-      <Text style={styles.progress}>
-        Questão {questionNum} de {PRACTICE_QUESTIONS_PER_SESSION}
-      </Text>
+      <View style={styles.progressBlock}>
+        <Text style={styles.progress}>
+          Questão {questionNum} de {PRACTICE_QUESTIONS_PER_SESSION}
+        </Text>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
+        </View>
+      </View>
       <Text style={styles.h1}>
         {practice.mode === "concept" ? practice.problem.prompt : "Qual é o resultado?"}
       </Text>
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          feedback === "ok" && styles.cardOk,
+          feedback === "bad" && styles.cardBad,
+        ]}
+      >
         {practice.mode === "arithmetic" ? (
           <Text style={styles.sum}>{formatProblem(practice.problem)}</Text>
         ) : null}
@@ -296,6 +317,8 @@ export function ExerciseScreen() {
           <View style={styles.options}>
             {choiceProblem.options.map((opt, i) => {
               const selected = selectedChoice === i;
+              const showOk = feedback === "ok" && selected;
+              const showBad = feedback === "bad" && selected;
               return (
                 <Pressable
                   key={i}
@@ -303,25 +326,39 @@ export function ExerciseScreen() {
                   onPress={() => setSelectedChoice(i)}
                   style={[
                     styles.optionBtn,
-                    selected && styles.optionBtnSelected,
+                    selected && feedback === "idle" && styles.optionBtnSelected,
+                    showOk && styles.optionBtnOk,
+                    showBad && styles.optionBtnBad,
                     busy && styles.disabled,
                   ]}
                 >
                   <Text
                     style={[
                       styles.optionTxt,
-                      selected && styles.optionTxtSelected,
+                      selected && feedback === "idle" && styles.optionTxtSelected,
+                      showOk && styles.optionTxtOk,
+                      showBad && styles.optionTxtBad,
                     ]}
                   >
                     {opt}
                   </Text>
+                  {showOk ? (
+                    <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+                  ) : null}
+                  {showBad ? (
+                    <Ionicons name="close-circle" size={22} color={colors.error} />
+                  ) : null}
                 </Pressable>
               );
             })}
           </View>
         ) : (
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              feedback === "ok" && styles.inputOk,
+              feedback === "bad" && styles.inputBad,
+            ]}
             keyboardType="numeric"
             value={input}
             onChangeText={setInput}
@@ -332,20 +369,24 @@ export function ExerciseScreen() {
         )}
 
         <AppButton
-          label="Verificar"
+          label={busy && feedback !== "idle" ? "Aguarde..." : "Verificar"}
           onPress={() => void handleSubmit()}
           disabled={!canSubmit}
-          loading={busy}
         />
-        {feedback === "ok" && (
-          <Text style={styles.ok}>Muito bem! +XP</Text>
-        )}
-        {feedback === "bad" && (
-          <View style={styles.fbBad}>
-            <Text style={styles.bad}>Não foi dessa vez.</Text>
-            <Text style={styles.small}>{explanation}</Text>
-          </View>
-        )}
+        {feedback === "ok" ? (
+          <PracticeFeedbackBanner
+            variant="ok"
+            title="Muito bem!"
+            message="+XP · Próxima questão em instantes"
+          />
+        ) : null}
+        {feedback === "bad" ? (
+          <PracticeFeedbackBanner
+            variant="bad"
+            title="Não foi dessa vez"
+            message={explanation}
+          />
+        ) : null}
         <Text style={styles.small}>
           Acertos nesta sessão: {correctCount} · Nível {tier}
         </Text>
@@ -365,19 +406,39 @@ function createExerciseStyles(colors: ColorTokens) {
     color: colors.muted,
     marginBottom: 4,
   },
+  progressBlock: { marginBottom: 12 },
   progress: {
     fontSize: 13,
     fontWeight: "600",
     color: colors.primary,
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.border,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
   },
   h1: { fontSize: 20, fontWeight: "700", color: colors.text, marginBottom: 12, lineHeight: 28 },
   card: {
     backgroundColor: colors.card,
     borderRadius: 16,
     padding: 18,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+  },
+  cardOk: {
+    borderColor: colors.success,
+    backgroundColor: colors.successBg,
+  },
+  cardBad: {
+    borderColor: colors.error,
+    backgroundColor: colors.errorBg,
   },
   sum: {
     fontSize: 32,
@@ -388,6 +449,10 @@ function createExerciseStyles(colors: ColorTokens) {
   },
   options: { gap: 10, marginBottom: 12 },
   optionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -399,10 +464,20 @@ function createExerciseStyles(colors: ColorTokens) {
     borderColor: colors.primary,
     backgroundColor: colors.primaryMuted,
   },
-  optionTxt: { fontSize: 15, color: colors.text, fontWeight: "600" },
+  optionBtnOk: {
+    borderColor: colors.success,
+    backgroundColor: colors.successBg,
+  },
+  optionBtnBad: {
+    borderColor: colors.error,
+    backgroundColor: colors.errorBg,
+  },
+  optionTxt: { flex: 1, fontSize: 15, color: colors.text, fontWeight: "600" },
   optionTxtSelected: { color: colors.primary },
+  optionTxtOk: { color: colors.successDark, fontWeight: "700" },
+  optionTxtBad: { color: colors.errorDark, fontWeight: "700" },
   input: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
@@ -411,10 +486,15 @@ function createExerciseStyles(colors: ColorTokens) {
     backgroundColor: colors.inputBg,
     color: colors.text,
   },
+  inputOk: {
+    borderColor: colors.success,
+    backgroundColor: colors.successBg,
+  },
+  inputBad: {
+    borderColor: colors.error,
+    backgroundColor: colors.errorBg,
+  },
   disabled: { opacity: 0.6 },
-  ok: { marginTop: 12, color: colors.successDark, fontWeight: "600" },
-  fbBad: { marginTop: 12 },
-  bad: { color: colors.error, fontWeight: "600" },
   small: { marginTop: 12, fontSize: 13, color: colors.muted },
   muted: { color: colors.muted },
   summaryScoreWrap: { alignItems: "center", marginBottom: 8 },

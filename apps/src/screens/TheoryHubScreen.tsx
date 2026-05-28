@@ -94,9 +94,6 @@ export function TheoryHubScreen() {
                     <Text style={styles.moduleTitle}>{mod.title}</Text>
                   </View>
                 </View>
-                <View style={styles.moduleReadPill}>
-                  <Text style={styles.moduleReadPillTxt}>Somente leitura</Text>
-                </View>
               </View>
               <Text style={styles.moduleDesc}>{mod.description}</Text>
 
@@ -280,15 +277,6 @@ function createTheoryHubStyles(colors: ColorTokens, layout: ThemeLayout) {
     fontWeight: "700",
     color: colors.text,
   },
-  moduleReadPill: {
-    backgroundColor: colors.primaryMuted,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  moduleReadPillTxt: { color: colors.primaryText, fontWeight: "700", fontSize: 11 },
   moduleDesc: { color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: 2 },
   topicCard: { gap: 12, padding: 14 },
   topicCardLocked: { opacity: 0.6 },

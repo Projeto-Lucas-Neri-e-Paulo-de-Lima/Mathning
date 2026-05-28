@@ -10,41 +10,53 @@ type Props = {
   labels: string[];
 };
 
+const SVG_WIDTH = 300;
+const SVG_HEIGHT = 168;
+const PAD_LEFT = 36;
+const PAD_TOP = 8;
+const PAD_BOTTOM = 36;
+const PAD_RIGHT = 12;
+
+/** Evita que 0% encoste na base e sobreponha os rótulos do eixo X. */
+const Y_FLOOR_RATIO = 0.06;
+
 export function SuccessRateLineChart({ points, labels }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createSuccessRateLineChartStyles(colors), [colors]);
 
-  const w = 300;
-  const h = 150;
-  const padL = 36;
-  const padB = 28;
-  const chartW = w - padL - 12;
-  const chartH = h - padB - 12;
+  const chartW = SVG_WIDTH - PAD_LEFT - PAD_RIGHT;
+  const chartH = SVG_HEIGHT - PAD_TOP - PAD_BOTTOM;
   const max = 100;
   const n = points.length;
   const step = n > 1 ? chartW / (n - 1) : chartW;
 
   const yTicks = [0, 25, 50, 75, 100];
 
+  const valueToY = (v: number) => {
+    const ratio = v / max;
+    const usable = 1 - Y_FLOOR_RATIO;
+    return PAD_TOP + chartH * (1 - ratio * usable);
+  };
+
   const coords = points.map((v, i) => {
-    const x = padL + i * step;
-    const y = padB + chartH - (v / max) * chartH;
-    return { x, y, v };
+    const x = PAD_LEFT + i * step;
+    return { x, y: valueToY(v), v };
   });
 
   const poly = coords.map((c) => `${c.x},${c.y}`).join(" ");
+  const baselineY = valueToY(0);
 
   return (
     <View style={styles.wrap}>
-      <Svg width={w} height={h}>
+      <Svg width={SVG_WIDTH} height={SVG_HEIGHT}>
         {yTicks.map((t) => {
-          const y = padB + chartH - (t / max) * chartH;
+          const y = valueToY(t);
           return (
             <Line
               key={t}
-              x1={padL}
+              x1={PAD_LEFT}
               y1={y}
-              x2={w - 8}
+              x2={SVG_WIDTH - PAD_RIGHT}
               y2={y}
               stroke={colors.border}
               strokeWidth={1}
@@ -53,13 +65,21 @@ export function SuccessRateLineChart({ points, labels }: Props) {
           );
         })}
         {yTicks.map((t) => {
-          const y = padB + chartH - (t / max) * chartH + 4;
+          const y = valueToY(t) + 4;
           return (
             <SvgText key={`y-${t}`} x={4} y={y} fontSize={10} fill={colors.muted}>
               {t}
             </SvgText>
           );
         })}
+        <Line
+          x1={PAD_LEFT}
+          y1={baselineY}
+          x2={SVG_WIDTH - PAD_RIGHT}
+          y2={baselineY}
+          stroke={colors.border}
+          strokeWidth={1}
+        />
         <Polyline
           points={poly}
           fill="none"
@@ -71,14 +91,22 @@ export function SuccessRateLineChart({ points, labels }: Props) {
         {coords.map((c, i) => (
           <Circle key={i} cx={c.x} cy={c.y} r={5} fill={colors.success} />
         ))}
+        {labels.map((label, i) => {
+          const x = PAD_LEFT + i * step;
+          return (
+            <SvgText
+              key={label}
+              x={x}
+              y={SVG_HEIGHT - 10}
+              fontSize={11}
+              fill={colors.muted}
+              textAnchor="middle"
+            >
+              {label}
+            </SvgText>
+          );
+        })}
       </Svg>
-      <View style={styles.xLabels}>
-        {labels.map((label) => (
-          <Text key={label} style={styles.xLab}>
-            {label}
-          </Text>
-        ))}
-      </View>
       <Text style={styles.caption}>Taxa de acerto mensal (%)</Text>
     </View>
   );
@@ -87,16 +115,8 @@ export function SuccessRateLineChart({ points, labels }: Props) {
 function createSuccessRateLineChartStyles(colors: ColorTokens) {
   return StyleSheet.create({
     wrap: { alignItems: "center" },
-    xLabels: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      width: 260,
-      marginTop: -18,
-      paddingLeft: 24,
-    },
-    xLab: { fontSize: 11, color: colors.muted, width: 48, textAlign: "center" },
     caption: {
-      marginTop: 12,
+      marginTop: 8,
       fontSize: 12,
       color: colors.muted,
       textAlign: "center",

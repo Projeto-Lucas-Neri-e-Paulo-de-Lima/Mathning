@@ -1,7 +1,6 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import {
-  DAILY_GOAL_EXERCISES,
   type ProfileAvatarId,
   xpToNextLevel,
 } from "@mathning/shared";
@@ -17,6 +16,7 @@ import {
 } from "react-native";
 import { AppButton } from "../components/AppButton";
 import { AppCard } from "../components/AppCard";
+import { DailyGoalStreakCard } from "../components/DailyGoalStreakCard";
 import { AvatarPickerModal } from "../components/AvatarPickerModal";
 import { BottomNav } from "../components/BottomNav";
 import { ScreenScrollView } from "../components/ScreenScrollView";
@@ -127,11 +127,6 @@ export function ProfileScreen() {
   const today = new Date().toISOString().slice(0, 10);
   const daily =
     progress.dailyExerciseDate === today ? (progress.dailyExerciseCount ?? 0) : 0;
-  const dailyPct = Math.min(
-    100,
-    Math.round((daily / DAILY_GOAL_EXERCISES) * 100),
-  );
-
   async function handleSelectAvatar(id: ProfileAvatarId) {
     setSavingAvatar(true);
     try {
@@ -229,15 +224,11 @@ export function ProfileScreen() {
           </View>
         </AppCard>
 
-        <AppCard variant="tint">
-          <Text style={styles.sectionTitle}>Meta diária</Text>
-          <Text style={styles.dailyMeta}>
-            {daily} de {DAILY_GOAL_EXERCISES} exercícios hoje
-          </Text>
-          <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${dailyPct}%` }]} />
-          </View>
-        </AppCard>
+        <DailyGoalStreakCard
+          daily={daily}
+          streak={progress.streak ?? 0}
+          showStreak={false}
+        />
 
         <ThemeSettingsCard />
 
@@ -360,18 +351,6 @@ function createProfileStyles(
   },
   statLabel: { fontSize: 14, color: colors.muted, flex: 1 },
   statVal: { fontSize: 14, fontWeight: "700", color: colors.text },
-  dailyMeta: { fontSize: 14, color: colors.muted, marginBottom: 8 },
-  barTrack: {
-    height: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.border,
-    overflow: "hidden",
-  },
-  barFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-  },
   warnBox: {
     backgroundColor: colors.errorBg,
     padding: 12,
