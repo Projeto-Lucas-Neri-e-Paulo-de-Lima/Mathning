@@ -12,6 +12,8 @@ import {
   View,
 } from "react-native";
 import { BottomNav } from "../components/BottomNav";
+import { LessonIconCircle } from "../components/LessonIconCircle";
+import { getLessonTopicVisual } from "../constants/lessonIcons";
 import { useAuthContext } from "../context/AuthContext";
 import { useAppHeader } from "../hooks/useAppHeader";
 import { isLessonUnlocked } from "../lib/progression";
@@ -30,13 +32,6 @@ const cardShadow = Platform.select({
   android: { elevation: 3 },
   default: {},
 });
-
-const THEORY_VISUAL = {
-  add: { color: "#10B981", icon: "add-circle" as const, label: "Adição" },
-  subtract: { color: "#A855F7", icon: "remove-circle" as const, label: "Subtração" },
-  multiply: { color: "#F59E0B", icon: "close-circle" as const, label: "Multiplicação" },
-  divide: { color: "#2563EB", icon: "git-compare" as const, label: "Divisão" },
-};
 
 /**
  * Tela principal de Teoria (mesmo nível da Trilha): lista fases e assuntos para ler antes de praticar.
@@ -108,7 +103,7 @@ export function TheoryHubScreen() {
               {mod.lessons.map((lesson) => {
                 const isDone = completed.includes(lesson.id);
                 const open = isLessonUnlocked(mod.id, lesson.id, completed);
-                const visual = THEORY_VISUAL[lesson.operation];
+                const topicVisual = getLessonTopicVisual(lesson.id, lesson.operation);
                 const goTheoryDetail = () =>
                   navigation.navigate("TheoryDetail", {
                     moduleId: mod.id,
@@ -130,28 +125,32 @@ export function TheoryHubScreen() {
                     ]}
                   >
                     <View style={styles.topicTop}>
-                      <View
-                        style={[
-                          styles.topicIcon,
-                          { backgroundColor: `${visual.color}1F` },
-                        ]}
-                      >
-                        <Ionicons
-                          name={open ? visual.icon : "lock-closed"}
-                          size={20}
-                          color={open ? visual.color : colors.locked}
-                        />
-                      </View>
+                      <LessonIconCircle
+                        lessonId={lesson.id}
+                        operation={lesson.operation}
+                        isDone={isDone}
+                        open={open}
+                        size={38}
+                      />
                       <View style={styles.topicMain}>
                         <View style={styles.topicTitleRow}>
                           <Text style={[styles.topicTitle, !open && styles.topicTitleOff]}>
                             {lesson.title}
                           </Text>
-                          <View style={[styles.operationPill, { backgroundColor: `${visual.color}1A` }]}>
-                            <Text style={[styles.operationPillTxt, { color: visual.color }]}>
-                              {visual.label}
-                            </Text>
-                          </View>
+                          {topicVisual.tag ? (
+                            <View
+                              style={[
+                                styles.operationPill,
+                                { backgroundColor: `${topicVisual.color}1A` },
+                              ]}
+                            >
+                              <Text
+                                style={[styles.operationPillTxt, { color: topicVisual.color }]}
+                              >
+                                {topicVisual.tag}
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
                         <Text style={[styles.topicSummary, !open && styles.topicSummaryOff]}>
                           {lesson.summary}
@@ -307,13 +306,6 @@ const styles = StyleSheet.create({
   },
   topicCardLocked: { opacity: 0.6 },
   topicTop: { flexDirection: "row", gap: 12 },
-  topicIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   topicMain: { flex: 1, gap: 6 },
   topicTitleRow: {
     flexDirection: "row",

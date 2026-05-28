@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import type { LessonTopicVisual } from "../constants/lessonIcons";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, radius } from "../theme/colors";
 
@@ -35,6 +36,7 @@ export function ConceptTheoryView({
   navigation,
   moduleId,
   lessonId,
+  topicVisual,
   alreadyDone,
   onComplete,
 }: {
@@ -44,6 +46,7 @@ export function ConceptTheoryView({
   navigation: Nav;
   moduleId: string;
   lessonId: string;
+  topicVisual: LessonTopicVisual;
   alreadyDone: boolean;
   onComplete: () => void;
 }) {
@@ -55,8 +58,13 @@ export function ConceptTheoryView({
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={[styles.hero, cardShadow]}>
           <View style={styles.heroTop}>
-            <View style={styles.heroIconWrap}>
-              <Ionicons name="layers-outline" size={22} color={colors.primary} />
+            <View
+              style={[
+                styles.heroIconWrap,
+                { backgroundColor: `${topicVisual.color}1F` },
+              ]}
+            >
+              <Ionicons name={topicVisual.icon} size={22} color={topicVisual.color} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.heroEyebrow}>Teoria · {moduleMeta?.title ?? "Módulo"}</Text>
@@ -120,7 +128,7 @@ export function ConceptTheoryView({
             {theory.examples.map((ex, i) => (
               <View key={ex.id} style={[styles.card, cardShadow]}>
                 <View style={styles.exampleTitleRow}>
-                  <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <View style={[styles.badge, { backgroundColor: topicVisual.color }]}>
                     <Text style={styles.badgeTxt}>{i + 1}</Text>
                   </View>
                   <Text style={styles.exampleTitle}>{ex.title}</Text>

@@ -1,7 +1,6 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { MODULES } from "@mathning/shared";
-import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Platform,
@@ -12,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { BottomNav } from "../components/BottomNav";
+import { LessonIconCircle } from "../components/LessonIconCircle";
 import { useAuthContext } from "../context/AuthContext";
 import { useAppHeader } from "../hooks/useAppHeader";
 import { isLessonUnlocked } from "../lib/progression";
@@ -118,28 +118,13 @@ export function LearningPathScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`Teoria: ${lesson.title}`}
                     >
-                      <View
-                        style={[
-                          styles.lessonIconCircle,
-                          isDone && styles.lessonIconDone,
-                          open && !isDone && styles.lessonIconOpen,
-                          !open && styles.lessonIconLocked,
-                        ]}
-                      >
-                        <Ionicons
-                          name={
-                            isDone ? "checkmark" : open ? "book-outline" : "lock-closed"
-                          }
-                          size={20}
-                          color={
-                            isDone
-                              ? "#fff"
-                              : open
-                                ? colors.primary
-                                : colors.locked
-                          }
-                        />
-                      </View>
+                      <LessonIconCircle
+                        lessonId={lesson.id}
+                        operation={lesson.operation}
+                        isDone={isDone}
+                        open={open}
+                        size={40}
+                      />
                       <View style={styles.lessonTitleWrap}>
                         <Text
                           style={[styles.lessonTitle, !open && styles.lessonTitleOff]}
@@ -271,16 +256,6 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   lessonLocked: { opacity: 0.55 },
-  lessonIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  lessonIconDone: { backgroundColor: colors.success },
-  lessonIconOpen: { backgroundColor: "#E9E4FF" },
-  lessonIconLocked: { backgroundColor: "#E5E7EB" },
   lessonMain: {
     flex: 1,
     flexDirection: "row",

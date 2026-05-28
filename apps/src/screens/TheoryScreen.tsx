@@ -19,6 +19,7 @@ import {
   View,
 } from "react-native";
 import { ConceptTheoryView } from "../components/ConceptTheoryView";
+import { getLessonTopicVisual } from "../constants/lessonIcons";
 import { useAuthContext } from "../context/AuthContext";
 import { useAppHeader } from "../hooks/useAppHeader";
 import { markDemoLessonDone } from "../lib/demoProgress";
@@ -62,16 +63,6 @@ type LessonExample = {
 type RuleNote = {
   title: string;
   text: string;
-};
-
-const OPERATION_UI: Record<
-  Operation,
-  { icon: React.ComponentProps<typeof Ionicons>["name"]; color: string; visualColor: string }
-> = {
-  add: { icon: "add", color: "#00C853", visualColor: "#10B981" },
-  subtract: { icon: "remove", color: "#A855F7", visualColor: "#A855F7" },
-  multiply: { icon: "close", color: "#F59E0B", visualColor: "#F59E0B" },
-  divide: { icon: "git-compare-outline", color: "#2563EB", visualColor: "#2563EB" },
 };
 
 function getRuleNotes(operation: Operation): RuleNote[] {
@@ -409,9 +400,9 @@ export function TheoryScreen() {
 
   const alreadyDone = completed.includes(lessonId);
   const lessonOperation = lesson.operation;
-  const operationUi = useMemo(
-    () => OPERATION_UI[lessonOperation],
-    [lessonOperation],
+  const topicVisual = useMemo(
+    () => getLessonTopicVisual(lessonId, lessonOperation),
+    [lessonId, lessonOperation],
   );
   const examples = useMemo(() => getExamples(lessonOperation), [lessonOperation]);
   const ruleNotes = useMemo(() => getRuleNotes(lessonOperation), [lessonOperation]);
@@ -426,6 +417,7 @@ export function TheoryScreen() {
         navigation={navigation}
         moduleId={moduleId}
         lessonId={lessonId}
+        topicVisual={topicVisual}
         alreadyDone={alreadyDone}
         onComplete={() => void handleCompleteLesson()}
       />
@@ -435,9 +427,9 @@ export function TheoryScreen() {
   return (
     <View style={styles.shell}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={[styles.hero, { backgroundColor: operationUi.color }]}>
+        <View style={[styles.hero, { backgroundColor: topicVisual.color }]}>
           <View style={styles.heroTitleRow}>
-            <Ionicons name={operationUi.icon} size={20} color="#fff" />
+            <Ionicons name={topicVisual.icon} size={20} color="#fff" />
             <Text style={styles.heroTitle}>{operationName}</Text>
           </View>
           <Text style={styles.heroSubtitle}>{lesson.summary}</Text>
@@ -504,7 +496,7 @@ export function TheoryScreen() {
               <View key={example.id} style={[styles.card, cardShadow]}>
                 <View style={styles.exampleTitleRow}>
                   <View
-                    style={[styles.exampleNumberBadge, { backgroundColor: operationUi.visualColor }]}
+                    style={[styles.exampleNumberBadge, { backgroundColor: topicVisual.color }]}
                   >
                     <Text style={styles.exampleNumberBadgeTxt}>{example.id.replace("ex-", "")}</Text>
                   </View>
@@ -611,7 +603,7 @@ export function TheoryScreen() {
                         {renderMultiplicationMatrix(
                           example.a,
                           example.b,
-                          operationUi.visualColor,
+                          topicVisual.color,
                         )}
                       </View>
                       <Text style={styles.matrixResultTxt}>
@@ -621,15 +613,15 @@ export function TheoryScreen() {
                   ) : (
                     <View style={styles.visualRow}>
                       <View style={styles.tokenWrap}>
-                        {renderTokens(example.a, operationUi.visualColor)}
+                        {renderTokens(example.a, topicVisual.color)}
                       </View>
                       <Text style={styles.visualOp}>{example.schoolMath.operationSymbol}</Text>
                       <View style={styles.tokenWrap}>
-                        {renderTokens(example.b, operationUi.visualColor)}
+                        {renderTokens(example.b, topicVisual.color)}
                       </View>
                       <Text style={styles.visualOp}>=</Text>
                       <View style={styles.tokenWrap}>
-                        {renderTokens(example.result, operationUi.visualColor)}
+                        {renderTokens(example.result, topicVisual.color)}
                       </View>
                     </View>
                   )}

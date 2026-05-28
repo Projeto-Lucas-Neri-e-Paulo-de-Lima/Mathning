@@ -144,8 +144,8 @@ export default function LoginScreen() {
             {demo ? (
               <View style={styles.messageInfo}>
                 <Text style={styles.messageInfoText}>
-                  Firebase ainda nao configurado. Preencha apps/.env para usar
-                  login real ou continue em demonstracao.
+                  Firebase ainda nao configurado. Preencha apps/.env e reinicie
+                  com npm run start:clear (ou expo start ./apps --clear).
                 </Text>
               </View>
             ) : null}
