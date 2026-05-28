@@ -1,7 +1,13 @@
-import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
+import {
+  DarkTheme,
+  DefaultTheme,
+  NavigationContainer,
+} from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useMemo } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { AuthProvider, useAuthContext } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { DashboardScreen } from "../screens/DashboardScreen";
 import { ExerciseScreen } from "../screens/ExerciseScreen";
 import { LearningPathScreen } from "../screens/LearningPathScreen";
@@ -9,40 +15,41 @@ import LoginScreen from "../screens/LoginScreen";
 import { TheoryHubScreen } from "../screens/TheoryHubScreen";
 import { TheoryScreen } from "../screens/TheoryScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
-import { colors } from "../theme/colors";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const theme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.bg,
-  },
-};
-
 function RootStack() {
   const { uid, demo, loading } = useAuthContext();
+  const { colors } = useTheme();
   const shouldShowLogin = !uid;
+
+  const screenOptions = useMemo(
+    () => ({
+      headerShadowVisible: false,
+      headerStyle: {
+        backgroundColor: colors.header,
+      },
+      headerTintColor: colors.text,
+      headerTitleStyle: {
+        fontWeight: "700" as const,
+        color: colors.text,
+      },
+    }),
+    [colors],
+  );
 
   if (!demo && loading && !uid) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: colors.bg }]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.muted}>Carregando...</Text>
+        <Text style={[styles.muted, { color: colors.muted }]}>Carregando...</Text>
       </View>
     );
   }
 
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: "#FFFFFF" },
-        headerTitleStyle: { fontWeight: "700" },
-      }}
-    >
+    <Stack.Navigator screenOptions={screenOptions}>
       {shouldShowLogin ? (
         <Stack.Screen
           name="Login"
@@ -87,12 +94,36 @@ function RootStack() {
   );
 }
 
+function ThemedNavigation() {
+  const { colors, isDark } = useTheme();
+
+  const navTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: colors.primary,
+        background: colors.bg,
+        card: colors.card,
+        text: colors.text,
+        border: colors.border,
+        notification: colors.primary,
+      },
+    };
+  }, [colors, isDark]);
+
+  return (
+    <NavigationContainer theme={navTheme}>
+      <RootStack />
+    </NavigationContainer>
+  );
+}
+
 export function AppNavigator() {
   return (
     <AuthProvider>
-      <NavigationContainer theme={theme}>
-        <RootStack />
-      </NavigationContainer>
+      <ThemedNavigation />
     </AuthProvider>
   );
 }
@@ -103,10 +134,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: colors.bg,
   },
   muted: {
-    color: colors.muted,
     fontSize: 14,
   },
 });

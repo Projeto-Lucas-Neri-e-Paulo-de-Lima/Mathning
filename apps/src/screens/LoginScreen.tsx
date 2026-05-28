@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -13,13 +13,22 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { ScreenBackground } from "../components/ScreenBackground";
 import { useAuthContext } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
+import { radius } from "../theme/radius";
+import type { ColorTokens } from "../theme/tokens";
 
 const Logo = require("../../assets/mathning_sem_fundo.png");
 
 type AuthMode = "signIn" | "signUp";
 
 export default function LoginScreen() {
+  const { colors, cardShadow, isDark } = useTheme();
+  const styles = useMemo(
+    () => createLoginStyles(colors, cardShadow),
+    [colors, cardShadow],
+  );
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -119,15 +128,19 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND} />
-      <KeyboardAvoidingView
-        style={styles.keyboard}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={colors.bg}
+      />
+      <ScreenBackground style={styles.flex}>
+        <KeyboardAvoidingView
+          style={styles.keyboard}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.header}>
             <Image source={Logo} style={styles.logo} resizeMode="contain" />
             <Text style={styles.title}>Bem-vindo ao Mathning</Text>
@@ -156,7 +169,7 @@ export default function LoginScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="Como quer ser chamado?"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.muted}
                   value={nome}
                   onChangeText={setNome}
                   autoCapitalize="words"
@@ -173,7 +186,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Digite seu email"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.muted}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -190,7 +203,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Digite sua senha"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.muted}
                 value={senha}
                 onChangeText={setSenha}
                 secureTextEntry
@@ -272,23 +285,22 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </ScreenBackground>
     </SafeAreaView>
   );
 }
 
-const PRIMARY = "#5B4CF0";
-const BACKGROUND = "#F5F6FA";
-const CARD = "#FFFFFF";
-const TEXT = "#1F2937";
-const MUTED = "#6B7280";
-const BORDER = "#E5E7EB";
-
-const styles = StyleSheet.create({
+function createLoginStyles(
+  colors: ColorTokens,
+  cardShadow: ReturnType<typeof import("../theme/ui").createCardShadow>,
+) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BACKGROUND,
+    backgroundColor: colors.bg,
   },
+  flex: { flex: 1 },
 
   keyboard: {
     flex: 1,
@@ -315,36 +327,32 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: "700",
-    color: TEXT,
+    color: colors.text,
     marginBottom: 8,
     textAlign: "center",
   },
 
   subtitle: {
     fontSize: 14,
-    color: MUTED,
+    color: colors.muted,
     textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 8,
   },
 
   card: {
-    backgroundColor: CARD,
-    borderRadius: 24,
+    backgroundColor: colors.card,
+    borderRadius: radius.hero,
     padding: 22,
     borderWidth: 1,
-    borderColor: BORDER,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    borderColor: colors.cardBorder,
+    ...cardShadow,
   },
 
   cardTitle: {
     fontSize: 22,
     fontWeight: "700",
-    color: TEXT,
+    color: colors.text,
     marginBottom: 20,
   },
 
@@ -355,24 +363,24 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: TEXT,
+    color: colors.text,
     marginBottom: 8,
   },
 
   input: {
     height: 52,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 16,
     paddingHorizontal: 16,
-    backgroundColor: "#FAFAFC",
+    backgroundColor: colors.cardMuted,
     fontSize: 15,
-    color: TEXT,
+    color: colors.text,
   },
 
   messageError: {
-    backgroundColor: "#FEE2E2",
-    borderColor: "#FCA5A5",
+    backgroundColor: colors.errorBg,
+    borderColor: colors.error,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -380,14 +388,14 @@ const styles = StyleSheet.create({
   },
 
   messageErrorText: {
-    color: "#991B1B",
+    color: colors.errorDark,
     fontSize: 13,
     lineHeight: 18,
   },
 
   messageInfo: {
-    backgroundColor: "#E0F2FE",
-    borderColor: "#7DD3FC",
+    backgroundColor: colors.infoBg,
+    borderColor: colors.infoBorder,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -395,7 +403,7 @@ const styles = StyleSheet.create({
   },
 
   messageInfoText: {
-    color: "#0369A1",
+    color: colors.infoText,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -408,13 +416,13 @@ const styles = StyleSheet.create({
 
   forgotText: {
     fontSize: 14,
-    color: PRIMARY,
+    color: colors.primary,
     fontWeight: "600",
   },
 
   loginButton: {
     height: 54,
-    backgroundColor: PRIMARY,
+    backgroundColor: colors.primary,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -433,16 +441,16 @@ const styles = StyleSheet.create({
   demoButton: {
     height: 52,
     borderWidth: 1,
-    borderColor: PRIMARY,
+    borderColor: colors.primary,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.card,
   },
 
   demoButtonText: {
-    color: PRIMARY,
+    color: colors.primary,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -455,12 +463,13 @@ const styles = StyleSheet.create({
 
   footerText: {
     fontSize: 14,
-    color: MUTED,
+    color: colors.muted,
   },
 
   footerLink: {
     fontSize: 14,
-    color: PRIMARY,
+    color: colors.primary,
     fontWeight: "700",
   },
-});
+  });
+}

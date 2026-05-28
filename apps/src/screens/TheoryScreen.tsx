@@ -25,21 +25,14 @@ import { useAppHeader } from "../hooks/useAppHeader";
 import { markDemoLessonDone } from "../lib/demoProgress";
 import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
-import { colors, radius } from "../theme/colors";
+import { ScreenBackground } from "../components/ScreenBackground";
+import { useTheme } from "../context/ThemeContext";
+import { radius } from "../theme/radius";
+import type { ColorTokens } from "../theme/tokens";
+import type { ViewStyle } from "react-native";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, "TheoryDetail">;
-
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-  },
-  android: { elevation: 3 },
-  default: {},
-});
 
 type TheoryTab = "concept" | "examples";
 
@@ -276,10 +269,10 @@ function getExamples(operation: Operation): LessonExample[] {
   ];
 }
 
-function renderTokens(count: number, color: string) {
+function renderTokens(count: number, color: string, token: ViewStyle, tokenDot: ViewStyle) {
   return Array.from({ length: count }).map((_, i) => (
-    <View key={i} style={[styles.token, { borderColor: color, backgroundColor: `${color}22` }]}>
-      <View style={[styles.tokenDot, { backgroundColor: color }]} />
+    <View key={i} style={[token, { borderColor: color, backgroundColor: `${color}22` }]}>
+      <View style={[tokenDot, { backgroundColor: color }]} />
     </View>
   ));
 }
@@ -302,15 +295,22 @@ function isNegativeSubtractionExample(operation: Operation, example: LessonExamp
   return operation === "subtract" && example.a < example.b;
 }
 
-function renderMultiplicationMatrix(rows: number, cols: number, color: string) {
+function renderMultiplicationMatrix(
+  rows: number,
+  cols: number,
+  color: string,
+  matrixRow: ViewStyle,
+  matrixDot: ViewStyle,
+  matrixDotInner: ViewStyle,
+) {
   return Array.from({ length: rows }).map((_, rowIdx) => (
-    <View key={`row-${rowIdx}`} style={styles.matrixRow}>
+    <View key={`row-${rowIdx}`} style={matrixRow}>
       {Array.from({ length: cols }).map((_, colIdx) => (
         <View
           key={`dot-${rowIdx}-${colIdx}`}
-          style={[styles.matrixDot, { borderColor: color, backgroundColor: `${color}22` }]}
+          style={[matrixDot, { borderColor: color, backgroundColor: `${color}22` }]}
         >
-          <View style={[styles.matrixDotInner, { backgroundColor: color }]} />
+          <View style={[matrixDotInner, { backgroundColor: color }]} />
         </View>
       ))}
     </View>
@@ -321,6 +321,11 @@ export function TheoryScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<R>();
   const { moduleId, lessonId } = params;
+  const { colors, layout, cardShadow } = useTheme();
+  const styles = useMemo(
+    () => createTheoryStyles(colors, cardShadow),
+    [colors, cardShadow],
+  );
   const { progress, db, uid, demo, updateLocalDemo, refreshProgress } =
     useAuthContext();
 
@@ -425,8 +430,8 @@ export function TheoryScreen() {
   }
 
   return (
-    <View style={styles.shell}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+    <ScreenBackground>
+      <ScrollView contentContainerStyle={layout.scroll}>
         <View style={[styles.hero, { backgroundColor: topicVisual.color }]}>
           <View style={styles.heroTitleRow}>
             <Ionicons name={topicVisual.icon} size={20} color="#fff" />
@@ -604,6 +609,9 @@ export function TheoryScreen() {
                           example.a,
                           example.b,
                           topicVisual.color,
+                          styles.matrixRow,
+                          styles.matrixDot,
+                          styles.matrixDotInner,
                         )}
                       </View>
                       <Text style={styles.matrixResultTxt}>
@@ -613,15 +621,30 @@ export function TheoryScreen() {
                   ) : (
                     <View style={styles.visualRow}>
                       <View style={styles.tokenWrap}>
-                        {renderTokens(example.a, topicVisual.color)}
+                        {renderTokens(
+                          example.a,
+                          topicVisual.color,
+                          styles.token,
+                          styles.tokenDot,
+                        )}
                       </View>
                       <Text style={styles.visualOp}>{example.schoolMath.operationSymbol}</Text>
                       <View style={styles.tokenWrap}>
-                        {renderTokens(example.b, topicVisual.color)}
+                        {renderTokens(
+                          example.b,
+                          topicVisual.color,
+                          styles.token,
+                          styles.tokenDot,
+                        )}
                       </View>
                       <Text style={styles.visualOp}>=</Text>
                       <View style={styles.tokenWrap}>
-                        {renderTokens(example.result, topicVisual.color)}
+                        {renderTokens(
+                          example.result,
+                          topicVisual.color,
+                          styles.token,
+                          styles.tokenDot,
+                        )}
                       </View>
                     </View>
                   )}
@@ -699,13 +722,15 @@ export function TheoryScreen() {
           )}
         </View>
       </ScrollView>
-    </View>
+    </ScreenBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 20, paddingBottom: 32, gap: 16 },
+function createTheoryStyles(
+  colors: ColorTokens,
+  cardShadow: ReturnType<typeof import("../theme/ui").createCardShadow>,
+) {
+  return StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
   hero: {
     borderRadius: radius.card,
@@ -717,7 +742,7 @@ const styles = StyleSheet.create({
   heroSubtitle: { color: "#EEFFF4", fontSize: 15, lineHeight: 22 },
   tabWrap: {
     flexDirection: "row",
-    backgroundColor: "#E5E7EB",
+    backgroundColor: colors.border,
     borderRadius: radius.pill,
     padding: 4,
   },
@@ -727,7 +752,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radius.pill,
   },
-  tabBtnActive: { backgroundColor: "#fff" },
+  tabBtnActive: { backgroundColor: colors.card },
   tabTxt: { fontSize: 13, fontWeight: "600", color: colors.muted },
   tabTxtActive: { color: colors.text },
   sectionTitle: {
@@ -736,7 +761,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 10,
   },
-  body: { fontSize: 16, color: "#3d3a45", lineHeight: 25 },
+  body: { fontSize: 16, color: colors.bodyText, lineHeight: 25 },
   tipBox: {
     flexDirection: "row",
     gap: 10,
@@ -779,7 +804,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 14,
     borderRadius: 12,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: colors.cardMuted,
     paddingVertical: 14,
     alignItems: "center",
   },
@@ -791,7 +816,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     marginBottom: 14,
-    backgroundColor: "#FCFCFD",
+    backgroundColor: colors.bgSoft,
   },
   visualRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 },
   tokenWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
@@ -1006,4 +1031,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   btnTxt: { color: "#fff", fontWeight: "600" },
-});
+  });
+}

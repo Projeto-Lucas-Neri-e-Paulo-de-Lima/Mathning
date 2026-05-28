@@ -1,5 +1,6 @@
 import type { ProfileAvatarId } from "@mathning/shared";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import {
   Image,
   Modal,
@@ -10,7 +11,9 @@ import {
   View,
 } from "react-native";
 import { PROFILE_AVATAR_OPTIONS } from "../constants/profileAvatars";
-import { colors, radius } from "../theme/colors";
+import { useTheme } from "../context/ThemeContext";
+import { radius } from "../theme/radius";
+import type { ColorTokens } from "../theme/tokens";
 
 export function AvatarPickerModal({
   visible,
@@ -23,6 +26,9 @@ export function AvatarPickerModal({
   onSelect: (id: ProfileAvatarId) => void;
   onClose: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createAvatarPickerStyles(colors), [colors]);
+
   return (
     <Modal
       visible={visible}
@@ -78,7 +84,8 @@ export function AvatarPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+function createAvatarPickerStyles(colors: ColorTokens) {
+  return StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -142,4 +149,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   closeBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 15 },
-});
+  });
+}

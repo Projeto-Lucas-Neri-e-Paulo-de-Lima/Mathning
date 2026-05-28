@@ -1,6 +1,6 @@
 import type { RouteProp } from "@react-navigation/native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   answersMatch,
   arithmeticProblemSignature,
@@ -31,6 +31,8 @@ import {
 } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuthContext } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
+import type { ColorTokens } from "../theme/tokens";
 import { markDemoPracticeCompleted, recordDemoExercise } from "../lib/demoProgress";
 import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
@@ -79,6 +81,8 @@ export function ExerciseScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<R>();
   const { moduleId, lessonId } = params;
+  const { colors } = useTheme();
+  const styles = useMemo(() => createExerciseStyles(colors), [colors]);
   const { progress, db, uid, demo, updateLocalDemo, refreshProgress } =
     useAuthContext();
 
@@ -318,7 +322,7 @@ export function ExerciseScreen() {
             value={input}
             onChangeText={setInput}
             placeholder="?"
-            placeholderTextColor="#9a94a8"
+            placeholderTextColor={colors.muted}
             editable={!busy}
           />
         )}
@@ -347,64 +351,65 @@ export function ExerciseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { padding: 20, paddingBottom: 40, backgroundColor: "#f6f4f8", flexGrow: 1 },
+function createExerciseStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+  scroll: { padding: 20, paddingBottom: 40, backgroundColor: colors.bg, flexGrow: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   eyebrow: {
     fontSize: 11,
     textTransform: "uppercase",
     letterSpacing: 1,
-    color: "#6b6578",
+    color: colors.muted,
     marginBottom: 4,
   },
   progress: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#5b4dff",
+    color: colors.primary,
     marginBottom: 6,
   },
-  h1: { fontSize: 20, fontWeight: "700", color: "#1a1a22", marginBottom: 12, lineHeight: 28 },
+  h1: { fontSize: 20, fontWeight: "700", color: colors.text, marginBottom: 12, lineHeight: 28 },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 18,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#e2dfe8",
+    borderColor: colors.cardBorder,
   },
   sum: {
     fontSize: 32,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 16,
-    color: "#1a1a22",
+    color: colors.text,
   },
   options: { gap: 10, marginBottom: 12 },
   optionBtn: {
     borderWidth: 1,
-    borderColor: "#e2dfe8",
+    borderColor: colors.border,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    backgroundColor: "#f6f4f8",
+    backgroundColor: colors.cardMuted,
   },
   optionBtnSelected: {
-    borderColor: "#5b4dff",
-    backgroundColor: "#EEEAFF",
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
   },
-  optionTxt: { fontSize: 15, color: "#1a1a22", fontWeight: "600" },
-  optionTxtSelected: { color: "#5b4dff" },
+  optionTxt: { fontSize: 15, color: colors.text, fontWeight: "600" },
+  optionTxtSelected: { color: colors.primary },
   input: {
     borderWidth: 1,
-    borderColor: "#e2dfe8",
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
     fontSize: 22,
     marginBottom: 12,
-    backgroundColor: "#f6f4f8",
-    color: "#1a1a22",
+    backgroundColor: colors.inputBg,
+    color: colors.text,
   },
   primaryBtn: {
-    backgroundColor: "#5b4dff",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
@@ -416,30 +421,31 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e2dfe8",
+    borderColor: colors.border,
   },
-  secondaryBtnTxt: { color: "#1a1a22", fontWeight: "600", fontSize: 16 },
+  secondaryBtnTxt: { color: colors.text, fontWeight: "600", fontSize: 16 },
   disabled: { opacity: 0.6 },
-  ok: { marginTop: 12, color: "#0d9b5c", fontWeight: "600" },
+  ok: { marginTop: 12, color: colors.successDark, fontWeight: "600" },
   fbBad: { marginTop: 12 },
-  bad: { color: "#c53030", fontWeight: "600" },
-  small: { marginTop: 12, fontSize: 13, color: "#6b6578" },
-  muted: { color: "#6b6578" },
+  bad: { color: colors.error, fontWeight: "600" },
+  small: { marginTop: 12, fontSize: 13, color: colors.muted },
+  muted: { color: colors.muted },
   summaryScoreWrap: { alignItems: "center", marginBottom: 8 },
-  summaryScore: { fontSize: 48, fontWeight: "800", color: "#5b4dff" },
-  summaryLabel: { fontSize: 14, color: "#6b6578", fontWeight: "600" },
+  summaryScore: { fontSize: 48, fontWeight: "800", color: colors.primary },
+  summaryLabel: { fontSize: 14, color: colors.muted, fontWeight: "600" },
   summaryPct: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1a1a22",
+    color: colors.text,
     textAlign: "center",
     marginBottom: 8,
   },
   summaryMsg: {
     fontSize: 14,
-    color: "#6b6578",
+    color: colors.muted,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 20,
   },
-});
+  });
+}

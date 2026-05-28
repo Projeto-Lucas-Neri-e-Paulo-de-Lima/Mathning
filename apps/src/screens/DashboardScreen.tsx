@@ -7,24 +7,30 @@ import {
   xpToNextLevel,
 } from "@mathning/shared";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { AppCard } from "../components/AppCard";
 import { SuccessRateLineChart } from "../components/charts/SuccessRateLineChart";
 import { WeeklyXpChart } from "../components/charts/WeeklyXpChart";
 import { BottomNav } from "../components/BottomNav";
+import { LessonIconCircle } from "../components/LessonIconCircle";
 import { ProfileAvatar } from "../components/ProfileAvatar";
+import { ScreenBackground } from "../components/ScreenBackground";
 import { useAuthContext } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { useAppHeader } from "../hooks/useAppHeader";
 import type { RootStackParamList } from "../navigation/types";
-import { colors, radius } from "../theme/colors";
+import { radius } from "../theme/radius";
+import type { ColorTokens } from "../theme/tokens";
+import type { ThemeLayout } from "../theme/ui";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -43,23 +49,35 @@ function weekBarsFromProgress(totalXp: number, lastActiveDate: string): number[]
   return days;
 }
 
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-  },
-  android: { elevation: 4 },
-  default: {},
-});
-
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   useAppHeader(navigation, "Mathning", { showProfileButton: false });
-  const { progress, loading, error, demo, displayName, avatarId, signOutUser } =
-    useAuthContext();
+  const { colors, layout, cardShadow } = useTheme();
+  const styles = useMemo(
+    () => createDashboardStyles(colors, layout),
+    [colors, layout],
+  );
+  const {
+    progress,
+    loading,
+    error,
+    demo,
+    displayName,
+    avatarId,
+    signOutUser,
+    refreshProgress,
+  } = useAuthContext();
   const [showDemoBanner, setShowDemoBanner] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handlePullRefresh() {
+    setRefreshing(true);
+    try {
+      await refreshProgress();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   if (error) {
     return (
@@ -99,9 +117,16 @@ export function DashboardScreen() {
   const goalMet = daily >= DAILY_GOAL_EXERCISES;
   const modTitle =
     getModuleById(progress.currentModuleId)?.title ?? progress.currentModuleId;
-  const lessonLabel =
-    getLesson(progress.currentModuleId, progress.currentLessonId)?.title ??
-    progress.currentLessonId;
+  const currentLesson = getLesson(
+    progress.currentModuleId,
+    progress.currentLessonId,
+  );
+  const lessonLabel = currentLesson?.title ?? progress.currentLessonId;
+  const lessonOperation = currentLesson?.operation ?? "add";
+  const continueParams = {
+    moduleId: progress.currentModuleId,
+    lessonId: progress.currentLessonId,
+  };
 
   const totalAnswers = progress.stats.correct + progress.stats.wrong;
   const rate =
@@ -123,23 +148,55 @@ export function DashboardScreen() {
       : "Foque nas lições com mais erros para subir sua taxa",
   ];
 
+  const greetingName = displayName || (demo ? "Visitante" : "Estudante");
+
   return (
-    <View style={styles.shell}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={[styles.welcomeRow, cardShadow]}>
-          <ProfileAvatar avatarId={avatarId} size={56} />
-          <View style={styles.welcomeText}>
-            <Text style={styles.welcomeEyebrow}>Olá!</Text>
-            <Text style={styles.welcomeName} numberOfLines={2}>
-              {displayName || (demo ? "Visitante" : "Estudante")}
-            </Text>
+    <ScreenBackground>
+      <ScrollView
+        contentContainerStyle={layout.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handlePullRefresh()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        <View style={styles.heroBanner}>
+          <View style={[layout.heroBlob, { top: -30, right: -20 }]} />
+          <View style={[layout.heroBlobSmall, { bottom: 8, left: -10 }]} />
+          <View style={styles.heroRow}>
+            <ProfileAvatar avatarId={avatarId} size={58} />
+            <View style={styles.heroText}>
+              <Text style={styles.heroEyebrow}>Olá!</Text>
+              <Text style={styles.heroName} numberOfLines={2}>
+                {greetingName}
+              </Text>
+              <Text style={styles.heroSub}>Pronto para aprender hoje?</Text>
+            </View>
             <Pressable
               onPress={() => navigation.navigate("Profile")}
+              style={styles.heroProfileBtn}
               accessibilityRole="button"
               accessibilityLabel="Abrir perfil"
             >
-              <Text style={styles.welcomeLink}>Ver perfil</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textOnPrimary} />
             </Pressable>
+          </View>
+          <View style={styles.heroPills}>
+            <View style={styles.heroPill}>
+              <Ionicons name="ribbon-outline" size={14} color={colors.textOnPrimary} />
+              <Text style={styles.heroPillTxt}>Nível {currentLevel}</Text>
+            </View>
+            <View style={styles.heroPill}>
+              <Ionicons name="flame-outline" size={14} color={colors.textOnPrimary} />
+              <Text style={styles.heroPillTxt}>{progress.streak ?? 0} dias</Text>
+            </View>
+            <View style={styles.heroPill}>
+              <Ionicons name="star-outline" size={14} color={colors.textOnPrimary} />
+              <Text style={styles.heroPillTxt}>{progress.xp} XP</Text>
+            </View>
           </View>
         </View>
 
@@ -160,8 +217,48 @@ export function DashboardScreen() {
           </View>
         )}
 
-        <View style={[styles.card, cardShadow]}>
-          <Text style={styles.eyebrow}>Seu nível</Text>
+        <View style={styles.continueHero}>
+          <View style={[layout.heroBlob, { top: -40, right: -24, opacity: 0.9 }]} />
+          <Text style={styles.continueEyebrow}>De onde você parou</Text>
+          <View style={styles.continueRow}>
+            <LessonIconCircle
+              lessonId={progress.currentLessonId}
+              operation={lessonOperation}
+              isDone={false}
+              open
+              size={52}
+            />
+            <View style={styles.continueText}>
+              <Text style={styles.continueLesson} numberOfLines={2}>
+                {lessonLabel}
+              </Text>
+              <Text style={styles.continueModule} numberOfLines={1}>
+                {modTitle}
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            style={styles.continuePrimaryBtn}
+            onPress={() => navigation.navigate("TheoryDetail", continueParams)}
+            accessibilityRole="button"
+            accessibilityLabel={`Continuar teoria: ${lessonLabel}`}
+          >
+            <Ionicons name="play" size={22} color={colors.primary} />
+            <Text style={styles.continuePrimaryBtnTxt}>Continuar teoria</Text>
+          </Pressable>
+          <Pressable
+            style={styles.continueSecondaryBtn}
+            onPress={() => navigation.navigate("Exercise", continueParams)}
+            accessibilityRole="button"
+            accessibilityLabel={`Praticar: ${lessonLabel}`}
+          >
+            <Ionicons name="barbell-outline" size={18} color={colors.textOnPrimary} />
+            <Text style={styles.continueSecondaryBtnTxt}>Praticar agora</Text>
+          </Pressable>
+        </View>
+
+        <AppCard>
+          <Text style={layout.sectionEyebrow}>Seu nível</Text>
           <View style={styles.levelRow}>
             <View style={styles.levelLeft}>
               <Text style={styles.levelNum}>{currentLevel}</Text>
@@ -187,16 +284,16 @@ export function DashboardScreen() {
               Faltam {xpRemaining} XP para o nível {nextLevel}
             </Text>
           </View>
-        </View>
+        </AppCard>
 
-        <View style={[styles.card, cardShadow]}>
+        <AppCard variant="tint">
           <View style={styles.goalHeader}>
             <View style={styles.goalIconBox}>
               <Ionicons name="locate-outline" size={22} color={colors.success} />
             </View>
             <View style={styles.goalTitles}>
-              <Text style={styles.h2}>Meta de hoje</Text>
-              <Text style={styles.muted}>
+              <Text style={layout.h2}>Meta de hoje</Text>
+              <Text style={layout.muted}>
                 {daily} de {DAILY_GOAL_EXERCISES} exercícios
               </Text>
             </View>
@@ -213,34 +310,12 @@ export function DashboardScreen() {
               <Text style={styles.goalSuccessTxt}>Parabéns! Meta de hoje concluída!</Text>
             </View>
           )}
-        </View>
+        </AppCard>
 
-        <View style={[styles.card, cardShadow]}>
-          <Text style={styles.h2}>Continuar</Text>
-          <Text style={styles.muted}>
-            <Text>Módulo: </Text>
-            <Text style={styles.bold}>{modTitle}</Text>
-            <Text> · Lição: </Text>
-            <Text style={styles.bold}>{lessonLabel}</Text>
-          </Text>
-          <Pressable
-            style={styles.primaryBtn}
-            onPress={() =>
-              navigation.navigate("TheoryDetail", {
-                moduleId: progress.currentModuleId,
-                lessonId: progress.currentLessonId,
-              })
-            }
-          >
-            <Ionicons name="play" size={20} color="#fff" />
-            <Text style={styles.primaryBtnTxt}>Continuar de onde parei</Text>
-          </Pressable>
-        </View>
-
-        <View style={[styles.card, cardShadow]}>
-          <View style={styles.cardHead}>
+        <AppCard>
+          <View style={layout.cardHead}>
             <Ionicons name="ribbon-outline" size={22} color={colors.primary} />
-            <Text style={styles.h2}>Seu desempenho</Text>
+            <Text style={layout.h2}>Seu desempenho</Text>
           </View>
           <View style={styles.metricsRow}>
             <View style={[styles.metricCell, { backgroundColor: colors.metricBlueBg }]}>
@@ -281,28 +356,28 @@ export function DashboardScreen() {
               <Text style={styles.statLabel}>Erros</Text>
             </View>
           </View>
-        </View>
+        </AppCard>
 
-        <View style={[styles.card, cardShadow]}>
-          <View style={styles.cardHead}>
+        <AppCard>
+          <View style={layout.cardHead}>
             <Ionicons name="calendar-outline" size={22} color={colors.primary} />
-            <Text style={styles.h2}>Atividade semanal</Text>
+            <Text style={layout.h2}>Atividade semanal</Text>
           </View>
           <WeeklyXpChart values={weekValues} />
-        </View>
+        </AppCard>
 
-        <View style={[styles.card, cardShadow]}>
-          <View style={styles.cardHead}>
+        <AppCard>
+          <View style={layout.cardHead}>
             <Ionicons name="trending-up" size={22} color={colors.success} />
-            <Text style={styles.h2}>Evolução da taxa de acerto</Text>
+            <Text style={layout.h2}>Evolução da taxa de acerto</Text>
           </View>
           <SuccessRateLineChart points={linePoints} labels={lineLabels} />
-        </View>
+        </AppCard>
 
-        <View style={[styles.card, cardShadow]}>
-          <View style={styles.cardHead}>
+        <AppCard>
+          <View style={layout.cardHead}>
             <Ionicons name="locate-outline" size={22} color={colors.primary} />
-            <Text style={styles.h2}>Estatísticas detalhadas</Text>
+            <Text style={layout.h2}>Estatísticas detalhadas</Text>
           </View>
           <View style={styles.detailOk}>
             <View style={styles.detailIconWrap}>
@@ -334,7 +409,7 @@ export function DashboardScreen() {
           <Text style={styles.detailTotalFoot}>
             Total de {totalAnswers} exercícios completados
           </Text>
-        </View>
+        </AppCard>
 
         <View style={styles.tipsCard}>
           <View style={styles.tipsHead}>
@@ -349,49 +424,69 @@ export function DashboardScreen() {
         </View>
       </ScrollView>
       <BottomNav navigation={navigation} route="Dashboard" />
-    </View>
+    </ScreenBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 20, paddingBottom: 32, gap: 14 },
+function createDashboardStyles(colors: ColorTokens, layout: ThemeLayout) {
+  return StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 8 },
-  welcomeRow: {
+  heroBanner: {
+    ...layout.heroBanner,
+    marginBottom: 2,
+  },
+  heroRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    padding: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    zIndex: 1,
   },
-  welcomeText: { flex: 1, minWidth: 0 },
-  welcomeEyebrow: {
+  heroText: { flex: 1, minWidth: 0 },
+  heroEyebrow: {
     fontSize: 12,
     fontWeight: "700",
-    color: colors.primary,
-    letterSpacing: 0.5,
+    color: colors.mutedOnPrimary,
+    letterSpacing: 0.6,
     marginBottom: 2,
   },
-  welcomeName: {
-    fontSize: 18,
+  heroName: {
+    fontSize: 22,
     fontWeight: "800",
-    color: colors.text,
-    marginBottom: 4,
+    color: colors.textOnPrimary,
+    marginBottom: 2,
   },
-  welcomeLink: {
+  heroSub: {
     fontSize: 13,
-    fontWeight: "700",
-    color: colors.primaryText,
+    color: colors.mutedOnPrimary,
   },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    padding: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+  heroProfileBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroPills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 16,
+    zIndex: 1,
+  },
+  heroPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  heroPillTxt: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.textOnPrimary,
   },
   banner: {
     flexDirection: "row",
@@ -404,13 +499,67 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   bannerTxt: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 18 },
-  eyebrow: {
+  continueHero: {
+    ...layout.heroBanner,
+    gap: 14,
+    overflow: "hidden",
+  },
+  continueEyebrow: {
     fontSize: 11,
+    fontWeight: "800",
+    color: colors.mutedOnPrimary,
+    letterSpacing: 1,
     textTransform: "uppercase",
-    letterSpacing: 1.2,
-    color: colors.primaryText,
+    zIndex: 1,
+  },
+  continueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    zIndex: 1,
+  },
+  continueText: { flex: 1, minWidth: 0 },
+  continueLesson: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: colors.textOnPrimary,
+    marginBottom: 4,
+  },
+  continueModule: {
+    fontSize: 13,
+    color: colors.mutedOnPrimary,
     fontWeight: "600",
-    marginBottom: 6,
+  },
+  continuePrimaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.card,
+    paddingVertical: 14,
+    borderRadius: radius.btn,
+    zIndex: 1,
+  },
+  continuePrimaryBtnTxt: {
+    color: colors.primary,
+    fontWeight: "800",
+    fontSize: 16,
+  },
+  continueSecondaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: radius.btn,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.35)",
+    zIndex: 1,
+  },
+  continueSecondaryBtnTxt: {
+    color: colors.textOnPrimary,
+    fontWeight: "700",
+    fontSize: 15,
   },
   levelRow: {
     flexDirection: "row",
@@ -451,18 +600,6 @@ const styles = StyleSheet.create({
   },
   xpHint: { color: colors.primary, fontSize: 13, fontWeight: "600" },
   muted: { color: colors.muted, fontSize: 14 },
-  cardHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 12,
-  },
-  h2: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 0,
-  },
   metricsRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
   metricCell: {
     flex: 1,
@@ -480,7 +617,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   metricVal: { fontSize: 20, fontWeight: "800" },
-  bold: { fontWeight: "700", color: colors.text },
   goalHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -503,17 +639,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   goalSuccessTxt: { color: colors.successDark, fontSize: 14, fontWeight: "600" },
-  primaryBtn: {
-    marginTop: 14,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: radius.btn,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-  },
-  primaryBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 16 },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -620,4 +745,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-});
+  });
+}

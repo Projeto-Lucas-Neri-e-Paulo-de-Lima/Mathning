@@ -1,39 +1,37 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { MODULES } from "@mathning/shared";
+import { useMemo } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { AppCard } from "../components/AppCard";
 import { BottomNav } from "../components/BottomNav";
+import { ScreenBackground } from "../components/ScreenBackground";
 import { LessonIconCircle } from "../components/LessonIconCircle";
 import { useAuthContext } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { useAppHeader } from "../hooks/useAppHeader";
 import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
-import { colors, radius } from "../theme/colors";
+import { radius } from "../theme/radius";
+import type { ColorTokens } from "../theme/tokens";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-  },
-  android: { elevation: 3 },
-  default: {},
-});
 
 export function LearningPathScreen() {
   const navigation = useNavigation<Nav>();
   useAppHeader(navigation, "Trilha", { showProfileButton: false });
+  const { colors, layout, cardShadow } = useTheme();
+  const styles = useMemo(
+    () => createLearningPathStyles(colors, cardShadow),
+    [colors, cardShadow],
+  );
   const { progress, loading } = useAuthContext();
   const completed = progress?.completedLessonIds ?? [];
   const practiced = progress?.practicedLessonIds ?? [];
@@ -49,13 +47,15 @@ export function LearningPathScreen() {
   const activeModules = MODULES.filter((m) => m.available);
 
   return (
-    <View style={styles.shell}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.h1}>Trilha de aprendizado</Text>
-        <Text style={styles.sub}>
-          Avance em ordem: cada lição libera a próxima. Toque no assunto para a teoria ou use
-          &quot;Pratique&quot; para exercícios — a aba Teoria reúne todos os textos para leitura.
-        </Text>
+    <ScreenBackground>
+      <ScrollView contentContainerStyle={layout.scroll}>
+        <View style={styles.pageIntro}>
+          <Text style={layout.pageTitle}>Trilha de aprendizado</Text>
+          <Text style={layout.pageSub}>
+            Avance em ordem: cada lição libera a próxima. Toque no assunto para a teoria ou use
+            &quot;Pratique&quot; para exercícios.
+          </Text>
+        </View>
 
         {activeModules.map((mod, phaseIdx) => {
           const total = mod.lessons.length;
@@ -64,7 +64,7 @@ export function LearningPathScreen() {
 
           return (
             <View key={mod.id}>
-              <View style={[styles.phaseCard, cardShadow]}>
+              <AppCard variant="accent" style={styles.phaseCard}>
                 <View style={styles.phaseTop}>
                   <View style={styles.phaseBadge}>
                     <Text style={styles.phaseBadgeTxt}>{phaseIdx + 1}</Text>
@@ -81,7 +81,7 @@ export function LearningPathScreen() {
                 <View style={styles.progressTrack}>
                   <View style={[styles.progressFill, { width: `${pct}%` }]} />
                 </View>
-              </View>
+              </AppCard>
 
               {mod.lessons.map((lesson) => {
                 const isDone = completed.includes(lesson.id);
@@ -170,29 +170,18 @@ export function LearningPathScreen() {
         })}
       </ScrollView>
       <BottomNav navigation={navigation} route="LearningPath" />
-    </View>
+    </ScreenBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 20, paddingBottom: 36, gap: 12 },
+function createLearningPathStyles(
+  colors: ColorTokens,
+  cardShadow: ReturnType<typeof import("../theme/ui").createCardShadow>,
+) {
+  return StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  h1: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: colors.text,
-    marginBottom: 6,
-  },
-  sub: { color: colors.muted, fontSize: 14, marginBottom: 8, lineHeight: 20 },
-  phaseCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    padding: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    marginBottom: 8,
-  },
+  pageIntro: { marginBottom: 4 },
+  phaseCard: { marginBottom: 8 },
   phaseTop: { flexDirection: "row", gap: 14 },
   phaseBadge: {
     width: 48,
@@ -240,12 +229,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 12,
-    borderRadius: 12,
+    borderRadius: radius.card,
     marginBottom: 8,
     gap: 12,
     backgroundColor: colors.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    ...cardShadow,
   },
   lessonDone: {
     backgroundColor: colors.lessonDone,
@@ -307,4 +297,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.successDark,
   },
-});
+  });
+}

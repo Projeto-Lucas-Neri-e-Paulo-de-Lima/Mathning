@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { Operation } from "@mathning/shared";
 import { StyleSheet, View, type ViewStyle } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 import { getLessonIconState } from "../constants/lessonIcons";
 
 export function LessonIconCircle({
@@ -18,7 +19,8 @@ export function LessonIconCircle({
   size?: number;
   style?: ViewStyle;
 }) {
-  const state = getLessonIconState(lessonId, operation, { isDone, open });
+  const { colors } = useTheme();
+  const state = getLessonIconState(lessonId, operation, { isDone, open }, colors);
   const iconSize = Math.round(size * 0.5);
 
   return (

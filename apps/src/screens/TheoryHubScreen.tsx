@@ -2,36 +2,30 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { MODULES } from "@mathning/shared";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { AppCard } from "../components/AppCard";
 import { BottomNav } from "../components/BottomNav";
 import { LessonIconCircle } from "../components/LessonIconCircle";
+import { ScreenBackground } from "../components/ScreenBackground";
 import { getLessonTopicVisual } from "../constants/lessonIcons";
 import { useAuthContext } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { useAppHeader } from "../hooks/useAppHeader";
 import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
-import { colors, radius } from "../theme/colors";
+import { radius } from "../theme/radius";
+import type { ColorTokens } from "../theme/tokens";
+import type { ThemeLayout } from "../theme/ui";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-  },
-  android: { elevation: 3 },
-  default: {},
-});
 
 /**
  * Tela principal de Teoria (mesmo nível da Trilha): lista fases e assuntos para ler antes de praticar.
@@ -39,6 +33,11 @@ const cardShadow = Platform.select({
 export function TheoryHubScreen() {
   const navigation = useNavigation<Nav>();
   useAppHeader(navigation, "Teoria", { showProfileButton: false });
+  const { colors, layout } = useTheme();
+  const styles = useMemo(
+    () => createTheoryHubStyles(colors, layout),
+    [colors, layout],
+  );
   const { progress, loading } = useAuthContext();
   const completed = progress?.completedLessonIds ?? [];
 
@@ -52,30 +51,31 @@ export function TheoryHubScreen() {
 
   const activeModules = MODULES.filter((m) => m.available);
 
+  const topicCount = activeModules.reduce((acc, m) => acc + m.lessons.length, 0);
+
   return (
-    <View style={styles.shell}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={[styles.hero, cardShadow]}>
+    <ScreenBackground>
+      <ScrollView contentContainerStyle={layout.scroll}>
+        <View style={styles.heroBanner}>
+          <View style={[layout.heroBlob, { top: -24, right: -16 }]} />
           <View style={styles.heroTop}>
             <View style={styles.heroIconWrap}>
-              <Ionicons name="library-outline" size={22} color={colors.primary} />
+              <Ionicons name="library" size={24} color={colors.textOnPrimary} />
             </View>
             <View style={styles.heroTextWrap}>
               <Text style={styles.heroTitle}>Biblioteca de Teoria</Text>
               <Text style={styles.heroSub}>
-                Estude primeiro, pratique depois. Aqui você lê os conceitos com exemplos visuais.
+                Estude primeiro, pratique depois — conceitos com exemplos visuais.
               </Text>
             </View>
           </View>
           <View style={styles.heroMetaRow}>
             <View style={styles.heroMetaPill}>
-              <Ionicons name="book-outline" size={14} color={colors.primary} />
-              <Text style={styles.heroMetaTxt}>
-                {activeModules.reduce((acc, m) => acc + m.lessons.length, 0)} assuntos
-              </Text>
+              <Ionicons name="book-outline" size={14} color={colors.textOnPrimary} />
+              <Text style={styles.heroMetaTxt}>{topicCount} assuntos</Text>
             </View>
             <View style={styles.heroMetaPill}>
-              <Ionicons name="checkmark-circle-outline" size={14} color={colors.successDark} />
+              <Ionicons name="checkmark-circle-outline" size={14} color={colors.textOnPrimary} />
               <Text style={styles.heroMetaTxt}>{completed.length} concluídos</Text>
             </View>
           </View>
@@ -116,13 +116,9 @@ export function TheoryHubScreen() {
                   });
 
                 return (
-                  <View
+                  <AppCard
                     key={lesson.id}
-                    style={[
-                      styles.topicCard,
-                      cardShadow,
-                      !open && styles.topicCardLocked,
-                    ]}
+                    style={[styles.topicCard, !open ? styles.topicCardLocked : undefined]}
                   >
                     <View style={styles.topicTop}>
                       <LessonIconCircle
@@ -209,7 +205,7 @@ export function TheoryHubScreen() {
                         </View>
                       ) : null}
                     </View>
-                  </View>
+                  </AppCard>
                 );
               })}
             </View>
@@ -217,27 +213,23 @@ export function TheoryHubScreen() {
         })}
       </ScrollView>
       <BottomNav navigation={navigation} route="Teoria" />
-    </View>
+    </ScreenBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 20, paddingBottom: 36, gap: 16 },
+function createTheoryHubStyles(colors: ColorTokens, layout: ThemeLayout) {
+  return StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  hero: {
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    padding: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+  heroBanner: {
+    ...layout.heroBanner,
+    marginBottom: 4,
   },
-  heroTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  heroTop: { flexDirection: "row", alignItems: "flex-start", gap: 12, zIndex: 1 },
   heroIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: colors.primaryMuted,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -245,21 +237,21 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: colors.text,
+    color: colors.textOnPrimary,
     marginBottom: 4,
   },
-  heroSub: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  heroMetaRow: { marginTop: 12, flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  heroSub: { color: colors.mutedOnPrimary, fontSize: 13, lineHeight: 19 },
+  heroMetaRow: { marginTop: 14, flexDirection: "row", gap: 8, flexWrap: "wrap", zIndex: 1 },
   heroMetaPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: radius.pill,
   },
-  heroMetaTxt: { fontSize: 12, color: colors.text, fontWeight: "600" },
+  heroMetaTxt: { fontSize: 12, color: colors.textOnPrimary, fontWeight: "700" },
   moduleSection: { gap: 10 },
   moduleHead: {
     flexDirection: "row",
@@ -289,23 +281,18 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   moduleReadPill: {
-    backgroundColor: "#EDE9FE",
+    backgroundColor: colors.primaryMuted,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   moduleReadPillTxt: { color: colors.primaryText, fontWeight: "700", fontSize: 11 },
   moduleDesc: { color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: 2 },
-  topicCard: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    gap: 12,
-  },
+  topicCard: { gap: 12, padding: 14 },
   topicCardLocked: { opacity: 0.6 },
-  topicTop: { flexDirection: "row", gap: 12 },
+  topicTop: { flexDirection: "row", gap: 12, marginBottom: 4 },
   topicMain: { flex: 1, gap: 6 },
   topicTitleRow: {
     flexDirection: "row",
@@ -326,7 +313,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 19,
   },
-  topicSummaryOff: { color: "#9CA3AF" },
+  topicSummaryOff: { color: colors.muted },
   topicFoot: {
     flexDirection: "row",
     alignItems: "center",
@@ -349,10 +336,10 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#D9DDF0",
-    backgroundColor: "#F7F8FF",
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.cardMuted,
   },
-  readBtnDisabled: { backgroundColor: "#F3F4F6", borderColor: "#E5E7EB" },
+  readBtnDisabled: { backgroundColor: colors.bgSoft, borderColor: colors.border },
   readBtnTxt: { color: colors.primaryText, fontSize: 13, fontWeight: "700" },
   readBtnTxtOff: { color: colors.locked },
   practiceBtn: {
@@ -376,4 +363,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-});
+  });
+}

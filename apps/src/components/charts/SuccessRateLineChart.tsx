@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg";
-import { colors } from "../../theme/colors";
+import { useTheme } from "../../context/ThemeContext";
+import type { ColorTokens } from "../../theme/tokens";
 
 type Props = {
   /** Valores 0–100, um por rótulo */
@@ -9,6 +11,9 @@ type Props = {
 };
 
 export function SuccessRateLineChart({ points, labels }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createSuccessRateLineChartStyles(colors), [colors]);
+
   const w = 300;
   const h = 150;
   const padL = 36;
@@ -41,7 +46,7 @@ export function SuccessRateLineChart({ points, labels }: Props) {
               y1={y}
               x2={w - 8}
               y2={y}
-              stroke="#E5E7EB"
+              stroke={colors.border}
               strokeWidth={1}
               strokeDasharray="4 6"
             />
@@ -50,7 +55,7 @@ export function SuccessRateLineChart({ points, labels }: Props) {
         {yTicks.map((t) => {
           const y = padB + chartH - (t / max) * chartH + 4;
           return (
-            <SvgText key={`y-${t}`} x={4} y={y} fontSize={10} fill="#6B7280">
+            <SvgText key={`y-${t}`} x={4} y={y} fontSize={10} fill={colors.muted}>
               {t}
             </SvgText>
           );
@@ -79,20 +84,22 @@ export function SuccessRateLineChart({ points, labels }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { alignItems: "center" },
-  xLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: 260,
-    marginTop: -18,
-    paddingLeft: 24,
-  },
-  xLab: { fontSize: 11, color: colors.muted, width: 48, textAlign: "center" },
-  caption: {
-    marginTop: 12,
-    fontSize: 12,
-    color: colors.muted,
-    textAlign: "center",
-  },
-});
+function createSuccessRateLineChartStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    wrap: { alignItems: "center" },
+    xLabels: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      width: 260,
+      marginTop: -18,
+      paddingLeft: 24,
+    },
+    xLab: { fontSize: 11, color: colors.muted, width: 48, textAlign: "center" },
+    caption: {
+      marginTop: 12,
+      fontSize: 12,
+      color: colors.muted,
+      textAlign: "center",
+    },
+  });
+}

@@ -1,7 +1,8 @@
 import type { ComponentProps } from "react";
 import type { Ionicons } from "@expo/vector-icons";
 import type { Operation } from "@mathning/shared";
-import { colors } from "../theme/colors";
+import { getThemeColors } from "../theme/palettes";
+import type { ColorTokens } from "../theme/tokens";
 
 export type IoniconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -71,6 +72,7 @@ export function getLessonIconState(
   lessonId: string,
   operation: Operation,
   opts: { isDone: boolean; open: boolean },
+  themeColors: ColorTokens = getThemeColors("light"),
 ): LessonIconState {
   const { isDone, open } = opts;
 
@@ -78,15 +80,15 @@ export function getLessonIconState(
     return {
       icon: "checkmark",
       iconColor: "#FFFFFF",
-      backgroundColor: colors.success,
+      backgroundColor: themeColors.success,
     };
   }
 
   if (!open) {
     return {
       icon: "lock-closed",
-      iconColor: colors.locked,
-      backgroundColor: "#E5E7EB",
+      iconColor: themeColors.locked,
+      backgroundColor: themeColors.border,
     };
   }
 

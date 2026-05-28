@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect } from "react";
 import { Pressable, StyleSheet } from "react-native";
-import { colors } from "../theme/colors";
 import { ProfileAvatar } from "../components/ProfileAvatar";
 import { useAuthContext } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import type { RootStackParamList } from "../navigation/types";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -21,17 +21,20 @@ export function useAppHeader(
 ) {
   const showProfile = options?.showProfileButton !== false;
   const { avatarId } = useAuthContext();
+  const { colors } = useTheme();
 
   useLayoutEffect(() => {
     const apply = () => {
       const canBack = navigation.canGoBack();
       navigation.setOptions({
         title,
-        headerStyle: { backgroundColor: "#FFFFFF" },
-        headerTintColor: "#1A1A22",
-        headerShadowVisible: true,
+        headerStyle: {
+          backgroundColor: colors.header,
+        },
+        headerTintColor: colors.text,
+        headerShadowVisible: false,
         headerTitleAlign: "center",
-        headerTitleStyle: { fontWeight: "700", fontSize: 17, color: "#1A1A22" },
+        headerTitleStyle: { fontWeight: "800", fontSize: 17, color: colors.text },
         headerLeft: canBack
           ? () => (
               <Pressable
@@ -41,7 +44,7 @@ export function useAppHeader(
                 accessibilityRole="button"
                 accessibilityLabel="Voltar"
               >
-                <Ionicons name="arrow-back" size={24} color="#1A1A22" />
+                <Ionicons name="arrow-back" size={24} color={colors.text} />
               </Pressable>
             )
           : () => null,
@@ -50,7 +53,10 @@ export function useAppHeader(
               <Pressable
                 onPress={() => navigation.navigate("Profile")}
                 hitSlop={12}
-                style={headerStyles.profileBtn}
+                style={[
+                  headerStyles.profileBtn,
+                  { backgroundColor: colors.primaryMuted },
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel="Perfil"
               >
@@ -62,7 +68,7 @@ export function useAppHeader(
     };
     apply();
     return navigation.addListener("focus", apply);
-  }, [navigation, title, showProfile, avatarId]);
+  }, [navigation, title, showProfile, avatarId, colors]);
 }
 
 const headerStyles = StyleSheet.create({
@@ -70,6 +76,5 @@ const headerStyles = StyleSheet.create({
     marginRight: 8,
     padding: 3,
     borderRadius: 999,
-    backgroundColor: colors.primaryMuted,
   },
 });

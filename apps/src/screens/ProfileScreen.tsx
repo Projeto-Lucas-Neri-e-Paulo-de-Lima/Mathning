@@ -6,36 +6,31 @@ import {
   xpToNextLevel,
 } from "@mathning/shared";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { AppCard } from "../components/AppCard";
 import { AvatarPickerModal } from "../components/AvatarPickerModal";
 import { BottomNav } from "../components/BottomNav";
+import { ScreenBackground } from "../components/ScreenBackground";
 import { ProfileAvatar } from "../components/ProfileAvatar";
+import { ThemeSettingsCard } from "../components/ThemeSettingsCard";
 import { useAuthContext } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { useAppHeader } from "../hooks/useAppHeader";
 import type { RootStackParamList } from "../navigation/types";
-import { colors, radius } from "../theme/colors";
+import { radius } from "../theme/radius";
+import type { ColorTokens } from "../theme/tokens";
+import type { ThemeLayout } from "../theme/ui";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-  },
-  android: { elevation: 3 },
-  default: {},
-});
 
 function formatDate(iso: string): string {
   if (!iso) return "—";
@@ -47,6 +42,11 @@ function formatDate(iso: string): string {
 export function ProfileScreen() {
   const navigation = useNavigation<Nav>();
   useAppHeader(navigation, "Perfil", { showProfileButton: false });
+  const { colors, layout, cardShadow } = useTheme();
+  const styles = useMemo(
+    () => createProfileStyles(colors, layout, cardShadow),
+    [colors, layout, cardShadow],
+  );
 
   const {
     uid,
@@ -91,7 +91,7 @@ export function ProfileScreen() {
   if (error && !progress) {
     return (
       <View style={styles.center}>
-        <View style={[styles.card, cardShadow, styles.errorCard]}>
+        <View style={styles.errorCard}>
           <Ionicons name="warning-outline" size={28} color={colors.error} />
           <Text style={styles.errorTitle}>Não foi possível carregar</Text>
           <Text style={styles.muted}>{error}</Text>
@@ -147,9 +147,19 @@ export function ProfileScreen() {
   }
 
   return (
-    <View style={styles.shell}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={[styles.hero, cardShadow]}>
+    <ScreenBackground>
+      <ScrollView
+        contentContainerStyle={layout.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        <AppCard variant="accent" style={styles.hero}>
           <View style={styles.avatarBlock}>
             <ProfileAvatar avatarId={avatarId} size={96} />
             <Pressable
@@ -168,9 +178,9 @@ export function ProfileScreen() {
             <Text style={styles.emailSub}>{email}</Text>
           ) : null}
           <Text style={styles.uid}>ID: {uidLabel}</Text>
-        </View>
+        </AppCard>
 
-        <View style={[styles.card, cardShadow]}>
+        <AppCard>
           <Text style={styles.sectionTitle}>Atividade</Text>
           <View style={styles.metricsRow}>
             <View style={[styles.metric, { backgroundColor: colors.metricBlueBg }]}>
@@ -195,9 +205,9 @@ export function ProfileScreen() {
           <Text style={styles.xpHint}>
             Faltam {xpRemaining} XP para o nível {currentLevel + 1}
           </Text>
-        </View>
+        </AppCard>
 
-        <View style={[styles.card, cardShadow]}>
+        <AppCard>
           <Text style={styles.sectionTitle}>Estatísticas</Text>
           <View style={styles.statLine}>
             <Text style={styles.statLabel}>Taxa de acerto</Text>
@@ -221,9 +231,9 @@ export function ProfileScreen() {
             <Text style={styles.statLabel}>Última atividade</Text>
             <Text style={styles.statVal}>{formatDate(progress.lastActiveDate)}</Text>
           </View>
-        </View>
+        </AppCard>
 
-        <View style={[styles.card, cardShadow]}>
+        <AppCard variant="tint">
           <Text style={styles.sectionTitle}>Meta diária</Text>
           <Text style={styles.dailyMeta}>
             {daily} de {DAILY_GOAL_EXERCISES} exercícios hoje
@@ -231,7 +241,9 @@ export function ProfileScreen() {
           <View style={styles.barTrack}>
             <View style={[styles.barFill, { width: `${dailyPct}%` }]} />
           </View>
-        </View>
+        </AppCard>
+
+        <ThemeSettingsCard />
 
         {error ? (
           <View style={styles.warnBox}>
@@ -264,13 +276,16 @@ export function ProfileScreen() {
         onSelect={(id) => void handleSelectAvatar(id)}
         onClose={() => setPickerOpen(false)}
       />
-    </View>
+    </ScreenBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: 20, paddingBottom: 36, gap: 14 },
+function createProfileStyles(
+  colors: ColorTokens,
+  layout: ThemeLayout,
+  cardShadow: ReturnType<typeof import("../theme/ui").createCardShadow>,
+) {
+  return StyleSheet.create({
   center: {
     flex: 1,
     justifyContent: "center",
@@ -279,12 +294,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   hero: {
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    padding: 20,
     alignItems: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
   },
   avatarBlock: {
     alignItems: "center",
@@ -327,14 +337,13 @@ const styles = StyleSheet.create({
   badgeTxtFirebase: { color: colors.primaryText },
   emailSub: { fontSize: 14, color: colors.muted, marginBottom: 4 },
   uid: { fontSize: 11, color: colors.muted, marginTop: 4 },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    padding: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+  errorCard: {
+    alignItems: "center",
+    gap: 10,
+    maxWidth: 320,
+    ...layout.card,
+    ...cardShadow,
   },
-  errorCard: { alignItems: "center", gap: 10, maxWidth: 320 },
   errorTitle: { fontSize: 17, fontWeight: "700", color: colors.text },
   sectionTitle: {
     fontSize: 16,
@@ -405,4 +414,5 @@ const styles = StyleSheet.create({
   signOutTxt: { color: colors.error },
   btnDisabled: { opacity: 0.7 },
   muted: { color: colors.muted, fontSize: 14, marginTop: 8 },
-});
+  });
+}

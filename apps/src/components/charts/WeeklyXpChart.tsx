@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Line, Rect, Text as SvgText } from "react-native-svg";
-import { colors } from "../../theme/colors";
+import { useTheme } from "../../context/ThemeContext";
+import type { ColorTokens } from "../../theme/tokens";
 
 const DAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
@@ -11,6 +13,9 @@ type Props = {
 
 /** Gráfico de barras — XP por dia (valores 0–80 no protótipo). */
 export function WeeklyXpChart({ values, maxY = 80 }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createWeeklyXpChartStyles(colors), [colors]);
+
   const w = 280;
   const h = 140;
   const padL = 28;
@@ -35,7 +40,7 @@ export function WeeklyXpChart({ values, maxY = 80 }: Props) {
               y1={y}
               x2={w - 4}
               y2={y}
-              stroke="#E5E7EB"
+              stroke={colors.border}
               strokeWidth={1}
               strokeDasharray="4 6"
             />
@@ -44,7 +49,7 @@ export function WeeklyXpChart({ values, maxY = 80 }: Props) {
         {yTicks.map((t) => {
           const y = padB + chartH - (t / max) * chartH + 4;
           return (
-            <SvgText key={`y-${t}`} x={4} y={y} fontSize={9} fill="#6B7280">
+            <SvgText key={`y-${t}`} x={4} y={y} fontSize={9} fill={colors.muted}>
               {t}
             </SvgText>
           );
@@ -78,20 +83,22 @@ export function WeeklyXpChart({ values, maxY = 80 }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { alignItems: "center" },
-  labels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: 252,
-    marginTop: -8,
-    paddingLeft: 20,
-  },
-  lab: { fontSize: 10, color: colors.muted, width: 32, textAlign: "center" },
-  caption: {
-    marginTop: 10,
-    fontSize: 12,
-    color: colors.muted,
-    textAlign: "center",
-  },
-});
+function createWeeklyXpChartStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    wrap: { alignItems: "center" },
+    labels: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      width: 252,
+      marginTop: -8,
+      paddingLeft: 20,
+    },
+    lab: { fontSize: 10, color: colors.muted, width: 32, textAlign: "center" },
+    caption: {
+      marginTop: 10,
+      fontSize: 12,
+      color: colors.muted,
+      textAlign: "center",
+    },
+  });
+}

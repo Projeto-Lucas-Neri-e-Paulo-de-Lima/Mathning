@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { useAuthContext } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import type { RootStackParamList } from "../navigation/types";
-import { colors, radius } from "../theme/colors";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -52,6 +52,8 @@ export function BottomNav({
 }) {
   const insets = useSafeAreaInsets();
   const { avatarId } = useAuthContext();
+  const { colors, radius } = useTheme();
+  const styles = createStyles(colors, radius);
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -91,41 +93,56 @@ export function BottomNav({
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: "row",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.navBarBorder,
-    paddingTop: 8,
-    paddingHorizontal: 4,
-    backgroundColor: colors.navBar,
-  },
-  btn: {
-    flex: 1,
-    minWidth: 0,
-    paddingVertical: 6,
-    alignItems: "center",
-    gap: 3,
-    borderRadius: radius.sm,
-    marginHorizontal: 1,
-  },
-  btnActive: {
-    backgroundColor: colors.navBarActiveBg,
-  },
-  profileIcon: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileIconInactive: {
-    opacity: 0.82,
-  },
-  txt: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: colors.navBarInactive,
-  },
-  txtActive: {
-    color: colors.navBarActive,
-    fontWeight: "800",
-  },
-});
+function createStyles(
+  colors: ReturnType<typeof useTheme>["colors"],
+  radius: ReturnType<typeof useTheme>["radius"],
+) {
+  return StyleSheet.create({
+    wrap: {
+      flexDirection: "row",
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.navBarBorder,
+      paddingTop: 8,
+      paddingHorizontal: 4,
+      backgroundColor: colors.navBar,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.12,
+          shadowRadius: 8,
+        },
+        android: { elevation: 12 },
+        default: {},
+      }),
+    },
+    btn: {
+      flex: 1,
+      minWidth: 0,
+      paddingVertical: 6,
+      alignItems: "center",
+      gap: 3,
+      borderRadius: radius.sm,
+      marginHorizontal: 1,
+    },
+    btnActive: {
+      backgroundColor: colors.navBarActiveBg,
+    },
+    profileIcon: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    profileIconInactive: {
+      opacity: 0.82,
+    },
+    txt: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: colors.navBarInactive,
+    },
+    txtActive: {
+      color: colors.navBarActive,
+      fontWeight: "800",
+    },
+  });
+}
