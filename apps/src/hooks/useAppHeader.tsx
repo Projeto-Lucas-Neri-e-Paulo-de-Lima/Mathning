@@ -69,6 +69,7 @@ function HeaderBackButton({
       ]}
       accessibilityRole="button"
       accessibilityLabel="Voltar"
+      accessibilityHint="Retorna à tela anterior"
     >
       <Ionicons name="chevron-back" size={22} color={colors.textOnPrimary} />
     </Pressable>
@@ -78,8 +79,8 @@ function HeaderBackButton({
 const headerStyles = StyleSheet.create({
   backBtn: {
     marginLeft: 12,
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",

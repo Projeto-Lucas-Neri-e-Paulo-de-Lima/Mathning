@@ -1,8 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
+import { useToast } from "../context/ToastContext";
+import { triggerSelection } from "../lib/appHaptics";
 import type { ThemeMode } from "../theme/tokens";
 import { AppCard } from "./AppCard";
+import { PressableScale } from "./PressableScale";
 
 const MODE_OPTIONS: {
   id: ThemeMode;
@@ -16,7 +19,15 @@ const MODE_OPTIONS: {
 
 export function ThemeSettingsCard() {
   const { colors, mode, resolvedMode, setMode } = useTheme();
+  const { showToast } = useToast();
   const styles = createStyles(colors);
+
+  function handleSelectTheme(next: ThemeMode, label: string) {
+    if (mode === next) return;
+    setMode(next);
+    void triggerSelection();
+    showToast({ message: `Tema ${label.toLowerCase()}`, variant: "info" });
+  }
 
   return (
     <AppCard>
@@ -30,9 +41,10 @@ export function ThemeSettingsCard() {
         {MODE_OPTIONS.map((opt) => {
           const active = mode === opt.id;
           return (
-            <Pressable
+            <PressableScale
               key={opt.id}
-              onPress={() => setMode(opt.id)}
+              haptic={false}
+              onPress={() => handleSelectTheme(opt.id, opt.label)}
               style={[styles.row, active && styles.rowActive]}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
@@ -59,7 +71,7 @@ export function ThemeSettingsCard() {
               ) : (
                 <View style={styles.radio} />
               )}
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>

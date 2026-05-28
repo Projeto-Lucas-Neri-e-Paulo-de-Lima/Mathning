@@ -68,8 +68,8 @@ const DARK_BASE: Omit<
   primaryText: "#B8AEFF",
   text: "#F4F4F8",
   textOnPrimary: "#FFFFFF",
-  muted: "#9CA3B8",
-  mutedOnPrimary: "rgba(255, 255, 255, 0.78)",
+  muted: "#B8BECD",
+  mutedOnPrimary: "rgba(255, 255, 255, 0.85)",
   border: "#3A384C",
   success: "#4ADE80",
   successBg: "#14532D",
@@ -89,7 +89,7 @@ const DARK_BASE: Omit<
   metricBlueText: "#93C5FD",
   metricPurpleBg: "#312E81",
   metricGreenBg: "#14532D",
-  navInactive: "#9CA3B8",
+  navInactive: "#B8BECD",
   navBar: "#5C49F5",
   navBarBorder: "#4F3DCC",
   navBarInactive: "rgba(255, 255, 255, 0.65)",
@@ -101,7 +101,7 @@ const DARK_BASE: Omit<
   shadow: "rgba(0, 0, 0, 0.45)",
   tabTrack: "#3A384C",
   inputBg: "#2C2A3D",
-  bodyText: "#D1D5DB",
+  bodyText: "#E2E6EF",
 };
 
 function finishPalette(base: typeof LIGHT_BASE | typeof DARK_BASE, mode: ResolvedThemeMode): ColorTokens {

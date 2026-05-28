@@ -10,9 +10,11 @@ import {
   View,
 } from "react-native";
 import { AppButton } from "./AppButton";
+import { LessonFlowBar } from "./LessonFlowBar";
 import { AppCard } from "./AppCard";
-import { ScreenBackground } from "./ScreenBackground";
-import { ScreenScrollView } from "./ScreenScrollView";
+import type { TheorySectionLink } from "../context/TheoryReaderContext";
+import { TheoryReaderShell } from "./TheoryReaderShell";
+import { TheorySection } from "./TheorySection";
 import type { LessonTopicVisual } from "../constants/lessonIcons";
 import { useTheme } from "../context/ThemeContext";
 import type { RootStackParamList } from "../navigation/types";
@@ -52,9 +54,36 @@ export function ConceptTheoryView({
   const theory = conceptTheory;
   const [tab, setTab] = useState<Tab>("concept");
 
+  const sections = useMemo((): TheorySectionLink[] => {
+    if (tab === "examples") {
+      return theory.examples.map((ex, i) => ({
+        id: `ex-${ex.id}`,
+        title: ex.title || `Exemplo ${i + 1}`,
+      }));
+    }
+    const links: TheorySectionLink[] = theory.conceptBlocks.map((block) => ({
+      id: `block-${block.title}`,
+      title: block.title,
+    }));
+    links.push({ id: "vocab", title: "Vocabulário" });
+    links.push({ id: "rules", title: "Regras" });
+    links.push({ id: "practice-cta", title: "Praticar" });
+    return links;
+  }, [tab, theory]);
+
   return (
-    <ScreenBackground>
-      <ScreenScrollView>
+    <TheoryReaderShell
+      sections={sections}
+      header={
+        <LessonFlowBar
+          navigation={navigation}
+          moduleId={moduleId}
+          lessonId={lessonId}
+          lessonTitle={lesson.title}
+          mode="theory"
+        />
+      }
+    >
         <AppCard variant="accent" style={styles.hero}>
           <View style={styles.heroTop}>
             <View
@@ -97,12 +126,15 @@ export function ConceptTheoryView({
         {tab === "concept" ? (
           <>
             {theory.conceptBlocks.map((block) => (
-              <AppCard key={block.title}>
-                <Text style={styles.sectionTitle}>{block.title}</Text>
-                <Text style={styles.body}>{block.body}</Text>
-              </AppCard>
+              <TheorySection key={block.title} sectionId={`block-${block.title}`}>
+                <AppCard>
+                  <Text style={styles.sectionTitle}>{block.title}</Text>
+                  <Text style={styles.body}>{block.body}</Text>
+                </AppCard>
+              </TheorySection>
             ))}
 
+            <TheorySection sectionId="vocab">
             <AppCard>
               <Text style={styles.sectionTitle}>Vocabulário</Text>
               {theory.vocabulary.map((v) => (
@@ -111,7 +143,9 @@ export function ConceptTheoryView({
                 </Text>
               ))}
             </AppCard>
+            </TheorySection>
 
+            <TheorySection sectionId="rules">
             <AppCard>
               <Text style={styles.sectionTitle}>Regrinhas importantes</Text>
               {theory.ruleNotes.map((rule) => (
@@ -121,11 +155,13 @@ export function ConceptTheoryView({
                 </View>
               ))}
             </AppCard>
+            </TheorySection>
           </>
         ) : (
           <>
             {theory.examples.map((ex, i) => (
-              <AppCard key={ex.id}>
+              <TheorySection key={ex.id} sectionId={`ex-${ex.id}`}>
+              <AppCard>
                 <View style={styles.exampleTitleRow}>
                   <View style={[styles.badge, { backgroundColor: topicVisual.color }]}>
                     <Text style={styles.badgeTxt}>{i + 1}</Text>
@@ -166,10 +202,12 @@ export function ConceptTheoryView({
                 </View>
                 {ex.note ? <Text style={styles.note}>{ex.note}</Text> : null}
               </AppCard>
+              </TheorySection>
             ))}
           </>
         )}
 
+        <TheorySection sectionId="practice-cta">
         <AppCard variant="accent" style={styles.practiceCard}>
           <Text style={styles.practiceTitle}>Pronto para praticar?</Text>
           <Text style={styles.practiceSub}>
@@ -182,6 +220,7 @@ export function ConceptTheoryView({
             style={styles.ctaBtn}
           />
         </AppCard>
+        </TheorySection>
 
         <AppCard>
           <Text style={styles.small}>
@@ -203,8 +242,7 @@ export function ConceptTheoryView({
             />
           )}
         </AppCard>
-      </ScreenScrollView>
-    </ScreenBackground>
+    </TheoryReaderShell>
   );
 }
 

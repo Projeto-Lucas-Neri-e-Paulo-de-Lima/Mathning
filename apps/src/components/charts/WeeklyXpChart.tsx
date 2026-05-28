@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Line, Rect, Text as SvgText } from "react-native-svg";
+import { ChartEmptyPlaceholder } from "./ChartEmptyPlaceholder";
 import { useTheme } from "../../context/ThemeContext";
 import type { ColorTokens } from "../../theme/tokens";
 
@@ -9,12 +10,27 @@ const DAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 type Props = {
   values: number[];
   maxY?: number;
+  empty?: boolean;
+  emptyMessage?: string;
 };
 
 /** Gráfico de barras — XP por dia (valores 0–80 no protótipo). */
-export function WeeklyXpChart({ values, maxY = 80 }: Props) {
+export function WeeklyXpChart({
+  values,
+  maxY = 80,
+  empty = false,
+  emptyMessage = "Pratique para ver sua atividade semanal aqui.",
+}: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createWeeklyXpChartStyles(colors), [colors]);
+
+  if (empty || values.every((v) => v <= 0)) {
+    return (
+      <ChartEmptyPlaceholder
+        message={emptyMessage}
+      />
+    );
+  }
 
   const w = 280;
   const h = 140;
@@ -29,8 +45,12 @@ export function WeeklyXpChart({ values, maxY = 80 }: Props) {
   const yTicks = [0, 20, 40, 60, 80];
 
   return (
-    <View style={styles.wrap}>
-      <Svg width={w} height={h}>
+    <View
+      style={styles.wrap}
+      accessibilityLabel="Gráfico de XP por dia da semana"
+      accessibilityRole="image"
+    >
+      <Svg width={w} height={h} accessible={false}>
         {yTicks.map((t) => {
           const y = padB + chartH - (t / max) * chartH;
           return (

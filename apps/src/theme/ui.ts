@@ -1,4 +1,5 @@
 import { Platform, StyleSheet, type ViewStyle } from "react-native";
+import { fontFamilies } from "./typography";
 import type { ColorTokens } from "./tokens";
 import { radius } from "./colors";
 
@@ -87,25 +88,26 @@ export function createLayout(colors: ColorTokens) {
       backgroundColor: colors.heroBlobSmall,
     },
     sectionTitle: {
+      fontFamily: fontFamilies.extraBold,
       fontSize: 17,
-      fontWeight: "800",
       color: colors.text,
     },
     sectionEyebrow: {
+      fontFamily: fontFamilies.extraBold,
       fontSize: 11,
-      fontWeight: "800",
       color: colors.primaryText,
       letterSpacing: 1,
       textTransform: "uppercase",
       marginBottom: 4,
     },
     pageTitle: {
+      fontFamily: fontFamilies.extraBold,
       fontSize: 26,
-      fontWeight: "800",
       color: colors.text,
       marginBottom: 6,
     },
     pageSub: {
+      fontFamily: fontFamilies.regular,
       fontSize: 14,
       color: colors.muted,
       lineHeight: 20,
@@ -118,12 +120,13 @@ export function createLayout(colors: ColorTokens) {
       marginBottom: 12,
     },
     h2: {
+      fontFamily: fontFamilies.bold,
       fontSize: 17,
-      fontWeight: "700",
       color: colors.text,
       marginBottom: 0,
     },
     muted: {
+      fontFamily: fontFamilies.regular,
       color: colors.muted,
       fontSize: 14,
       lineHeight: 20,
@@ -139,8 +142,8 @@ export function createLayout(colors: ColorTokens) {
       gap: 8,
     },
     primaryBtnTxt: {
+      fontFamily: fontFamilies.bold,
       color: colors.textOnPrimary,
-      fontWeight: "700",
       fontSize: 16,
     },
   });

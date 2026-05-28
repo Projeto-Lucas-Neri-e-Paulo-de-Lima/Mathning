@@ -9,7 +9,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -22,13 +21,18 @@ import { AppButton } from "../components/AppButton";
 import { AppCard } from "../components/AppCard";
 import { DailyGoalStreakCard } from "../components/DailyGoalStreakCard";
 import { SuccessRateLineChart } from "../components/charts/SuccessRateLineChart";
+import { ChartEmptyPlaceholder } from "../components/charts/ChartEmptyPlaceholder";
 import { WeeklyXpChart } from "../components/charts/WeeklyXpChart";
 import { BottomNav } from "../components/BottomNav";
 import { LessonIconCircle } from "../components/LessonIconCircle";
+import { EmptyState } from "../components/EmptyState";
+import { DashboardSkeleton } from "../components/skeleton/DashboardSkeleton";
 import { ProfileAvatar } from "../components/ProfileAvatar";
 import { ScreenBackground } from "../components/ScreenBackground";
 import { useAuthContext } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { useTheme } from "../context/ThemeContext";
+import { triggerError } from "../lib/appHaptics";
 import { useAppHeader } from "../hooks/useAppHeader";
 import { useBottomNavInset } from "../hooks/useBottomNavInset";
 import type { RootStackParamList } from "../navigation/types";
@@ -78,11 +82,19 @@ export function DashboardScreen() {
   );
   const [showDemoBanner, setShowDemoBanner] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { showToast } = useToast();
 
   async function handlePullRefresh() {
     setRefreshing(true);
     try {
-      await refreshProgress();
+      const ok = await refreshProgress();
+      if (!ok) {
+        void triggerError();
+        showToast({
+          message: "Não foi possível atualizar. Verifique sua conexão.",
+          variant: "error",
+        });
+      }
     } finally {
       setRefreshing(false);
     }
@@ -91,27 +103,26 @@ export function DashboardScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <View style={styles.errorCard}>
-          <Ionicons name="warning-outline" size={28} color={colors.error} />
-          <Text style={styles.errorTitle}>Erro ao carregar progresso</Text>
-          <Text style={styles.err}>{error}</Text>
-          <AppButton
-            label="Voltar ao login"
-            variant="secondary"
-            onPress={() => void signOutUser()}
-            style={styles.errorActionBtn}
-          />
-        </View>
+        <EmptyState
+          title="Erro ao carregar progresso"
+          message={error}
+          actionLabel="Voltar ao login"
+          onAction={() => void signOutUser()}
+          actionVariant="secondary"
+        />
       </View>
     );
   }
 
   if (loading || !progress) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.muted}>Carregando...</Text>
-      </View>
+      <>
+        <DashboardSkeleton
+          safeAreaTop={insets.top}
+          bottomNavInset={bottomNavInset}
+        />
+        <BottomNav navigation={navigation} route="Dashboard" />
+      </>
     );
   }
 
@@ -135,6 +146,7 @@ export function DashboardScreen() {
   };
 
   const totalAnswers = progress.stats.correct + progress.stats.wrong;
+  const hasExerciseHistory = totalAnswers > 0;
   const rate =
     totalAnswers > 0
       ? Math.round((progress.stats.correct / totalAnswers) * 100)
@@ -144,6 +156,7 @@ export function DashboardScreen() {
       ? Math.round((progress.stats.wrong / totalAnswers) * 100)
       : 0;
   const weekValues = weekBarsFromProgress(progress.xp, progress.lastActiveDate);
+  const hasWeeklyXp = weekValues.some((v) => v > 0);
   const linePoints = [0, 0, 0, rate];
   const lineLabels = ["Jan", "Fev", "Mar", "Abr"];
   const tips = [
@@ -350,7 +363,15 @@ export function DashboardScreen() {
             <Ionicons name="calendar-outline" size={22} color={colors.primary} />
             <Text style={layout.h2}>Atividade semanal</Text>
           </View>
-          <WeeklyXpChart values={weekValues} />
+          {hasWeeklyXp ? (
+            <WeeklyXpChart values={weekValues} />
+          ) : (
+            <ChartEmptyPlaceholder
+              message="Pratique para ver sua atividade semanal aqui."
+              actionLabel="Ir para a trilha"
+              onAction={() => navigation.navigate("LearningPath")}
+            />
+          )}
         </AppCard>
 
         <AppCard>
@@ -358,7 +379,15 @@ export function DashboardScreen() {
             <Ionicons name="trending-up" size={22} color={colors.success} />
             <Text style={layout.h2}>Evolução da taxa de acerto</Text>
           </View>
-          <SuccessRateLineChart points={linePoints} labels={lineLabels} />
+          {hasExerciseHistory ? (
+            <SuccessRateLineChart points={linePoints} labels={lineLabels} />
+          ) : (
+            <ChartEmptyPlaceholder
+              message="Pratique exercícios para ver sua evolução de acertos."
+              actionLabel="Praticar agora"
+              onAction={() => navigation.navigate("Exercise", continueParams)}
+            />
+          )}
         </AppCard>
 
         <AppCard>
@@ -533,7 +562,6 @@ function createDashboardStyles(
   },
   continueBtnFirst: { marginTop: 0, zIndex: 1 },
   continueBtnSecond: { marginTop: 10, zIndex: 1 },
-  errorActionBtn: { marginTop: 8, alignSelf: "stretch" },
   levelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -664,23 +692,5 @@ function createDashboardStyles(
     lineHeight: 22,
     marginBottom: 4,
   },
-  errorCard: {
-    width: "88%",
-    maxWidth: 460,
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.errorBg,
-    padding: 20,
-    alignItems: "center",
-    gap: 10,
-  },
-  errorTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  err: { color: colors.error, textAlign: "center", lineHeight: 20 },
   });
 }

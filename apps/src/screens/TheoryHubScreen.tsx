@@ -4,13 +4,13 @@ import { MODULES } from "@mathning/shared";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { AppCard } from "../components/AppCard";
+import { HubListSkeleton } from "../components/skeleton/HubListSkeleton";
 import { BottomNav } from "../components/BottomNav";
 import { ScreenScrollView } from "../components/ScreenScrollView";
 import { LessonIconCircle } from "../components/LessonIconCircle";
@@ -24,6 +24,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { radius } from "../theme/radius";
 import type { ColorTokens } from "../theme/tokens";
 import type { ThemeLayout } from "../theme/ui";
+import { fontFamilies } from "../theme/typography";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -43,9 +44,10 @@ export function TheoryHubScreen() {
 
   if (loading || !progress) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <>
+        <HubListSkeleton />
+        <BottomNav navigation={navigation} route="Teoria" />
+      </>
     );
   }
 
@@ -232,12 +234,17 @@ function createTheoryHubStyles(colors: ColorTokens, layout: ThemeLayout) {
   },
   heroTextWrap: { flex: 1 },
   heroTitle: {
+    fontFamily: fontFamilies.extraBold,
     fontSize: 22,
-    fontWeight: "800",
     color: colors.textOnPrimary,
     marginBottom: 4,
   },
-  heroSub: { color: colors.mutedOnPrimary, fontSize: 13, lineHeight: 19 },
+  heroSub: {
+    fontFamily: fontFamilies.regular,
+    color: colors.mutedOnPrimary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
   heroMetaRow: { marginTop: 14, flexDirection: "row", gap: 8, flexWrap: "wrap", zIndex: 1 },
   heroMetaPill: {
     flexDirection: "row",
@@ -248,7 +255,11 @@ function createTheoryHubStyles(colors: ColorTokens, layout: ThemeLayout) {
     paddingVertical: 6,
     borderRadius: radius.pill,
   },
-  heroMetaTxt: { fontSize: 12, color: colors.textOnPrimary, fontWeight: "700" },
+  heroMetaTxt: {
+    fontFamily: fontFamilies.bold,
+    fontSize: 12,
+    color: colors.textOnPrimary,
+  },
   moduleSection: { gap: 10 },
   moduleHead: {
     flexDirection: "row",
@@ -319,9 +330,11 @@ function createTheoryHubStyles(colors: ColorTokens, layout: ThemeLayout) {
   readBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
+    minHeight: 44,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -331,8 +344,10 @@ function createTheoryHubStyles(colors: ColorTokens, layout: ThemeLayout) {
   readBtnTxt: { color: colors.primaryText, fontSize: 13, fontWeight: "700" },
   readBtnTxtOff: { color: colors.locked },
   practiceBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: colors.primary,
   },

@@ -7,7 +7,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -16,15 +15,21 @@ import {
 } from "react-native";
 import { AppButton } from "../components/AppButton";
 import { AppCard } from "../components/AppCard";
+import { CollapsibleSection } from "../components/CollapsibleSection";
 import { DailyGoalStreakCard } from "../components/DailyGoalStreakCard";
+import { EmptyState } from "../components/EmptyState";
+import { ProfileSkeleton } from "../components/skeleton/ProfileSkeleton";
 import { AvatarPickerModal } from "../components/AvatarPickerModal";
 import { BottomNav } from "../components/BottomNav";
 import { ScreenScrollView } from "../components/ScreenScrollView";
 import { ScreenBackground } from "../components/ScreenBackground";
 import { ProfileAvatar } from "../components/ProfileAvatar";
 import { ThemeSettingsCard } from "../components/ThemeSettingsCard";
+import { PressableScale } from "../components/PressableScale";
 import { useAuthContext } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { useTheme } from "../context/ThemeContext";
+import { triggerError, triggerSuccess } from "../lib/appHaptics";
 import { useAppHeader } from "../hooks/useAppHeader";
 import type { RootStackParamList } from "../navigation/types";
 import { radius } from "../theme/radius";
@@ -65,6 +70,7 @@ export function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
+  const { showToast } = useToast();
 
   const profileTitle = demo
     ? "Visitante (demonstração)"
@@ -74,7 +80,14 @@ export function ProfileScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      await refreshProgress();
+      const ok = await refreshProgress();
+      if (!ok) {
+        void triggerError();
+        showToast({
+          message: "Não foi possível atualizar. Verifique sua conexão.",
+          variant: "error",
+        });
+      }
     } finally {
       setRefreshing(false);
     }
@@ -82,36 +95,42 @@ export function ProfileScreen() {
 
   if (loading && !progress) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.muted}>Carregando perfil...</Text>
-      </View>
+      <>
+        <ProfileSkeleton />
+        <BottomNav navigation={navigation} route="Profile" />
+      </>
     );
   }
 
   if (error && !progress) {
     return (
-      <View style={styles.center}>
-        <View style={styles.errorCard}>
-          <Ionicons name="warning-outline" size={28} color={colors.error} />
-          <Text style={styles.errorTitle}>Não foi possível carregar</Text>
-          <Text style={styles.muted}>{error}</Text>
-          <AppButton
-            label="Tentar novamente"
-            onPress={() => void handleRefresh()}
-            loading={refreshing}
-            style={styles.actionBtn}
+      <ScreenBackground>
+        <View style={styles.center}>
+          <EmptyState
+            title="Não foi possível carregar"
+            message={error}
+            actionLabel="Tentar novamente"
+            onAction={() => void handleRefresh()}
+            actionLoading={refreshing}
           />
         </View>
-      </View>
+      </ScreenBackground>
     );
   }
 
   if (!progress) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.muted}>Nenhum progresso disponível.</Text>
-      </View>
+      <ScreenBackground>
+        <View style={styles.center}>
+          <EmptyState
+            title="Sem progresso ainda"
+            message="Entre na sua conta ou use o modo demonstração para acompanhar seu perfil aqui."
+            actionLabel="Ir para o início"
+            onAction={() => navigation.navigate("Dashboard")}
+            actionVariant="secondary"
+          />
+        </View>
+      </ScreenBackground>
     );
   }
 
@@ -132,6 +151,14 @@ export function ProfileScreen() {
     try {
       await updateUserAvatar(id);
       setPickerOpen(false);
+      void triggerSuccess();
+      showToast({ message: "Avatar salvo", variant: "success" });
+    } catch (e) {
+      void triggerError();
+      showToast({
+        message: e instanceof Error ? e.message : "Não foi possível salvar o avatar",
+        variant: "error",
+      });
     } finally {
       setSavingAvatar(false);
     }
@@ -153,23 +180,53 @@ export function ProfileScreen() {
         <AppCard variant="accent" style={styles.hero}>
           <View style={styles.avatarBlock}>
             <ProfileAvatar avatarId={avatarId} size={96} />
-            <Pressable
+            <PressableScale
               style={styles.changeAvatarBtn}
               onPress={() => setPickerOpen(true)}
               disabled={savingAvatar}
+              haptic={false}
               accessibilityRole="button"
               accessibilityLabel="Alterar foto de perfil"
             >
               <Ionicons name="camera-outline" size={16} color={colors.primary} />
               <Text style={styles.changeAvatarTxt}>Alterar</Text>
-            </Pressable>
+            </PressableScale>
           </View>
           <Text style={styles.name}>{profileTitle}</Text>
           {!demo && displayName && email ? (
             <Text style={styles.emailSub}>{email}</Text>
           ) : null}
-          <Text style={styles.uid}>ID: {uidLabel}</Text>
+          {demo ? (
+            <View style={[styles.badge, styles.badgeDemo]}>
+              <Text style={[styles.badgeTxt, styles.badgeTxtDemo]}>Modo demonstração</Text>
+            </View>
+          ) : (
+            <View style={[styles.badge, styles.badgeFirebase]}>
+              <Text style={[styles.badgeTxt, styles.badgeTxtFirebase]}>Conta conectada</Text>
+            </View>
+          )}
         </AppCard>
+
+        <CollapsibleSection title="Detalhes da conta">
+          <AppCard>
+            <View style={styles.statLine}>
+              <Text style={styles.statLabel}>ID da conta</Text>
+              <Text style={styles.statVal} selectable>
+                {uidLabel}
+              </Text>
+            </View>
+            {email ? (
+              <View style={styles.statLine}>
+                <Text style={styles.statLabel}>Email</Text>
+                <Text style={styles.statVal} selectable>
+                  {email}
+                </Text>
+              </View>
+            ) : null}
+          </AppCard>
+        </CollapsibleSection>
+
+        <Text style={layout.sectionEyebrow}>Progresso</Text>
 
         <AppCard>
           <Text style={styles.sectionTitle}>Atividade</Text>
@@ -230,6 +287,7 @@ export function ProfileScreen() {
           showStreak={false}
         />
 
+        <Text style={layout.sectionEyebrow}>Aparência</Text>
         <ThemeSettingsCard />
 
         {error ? (
@@ -317,14 +375,6 @@ function createProfileStyles(
   badgeTxtFirebase: { color: colors.primaryText },
   emailSub: { fontSize: 14, color: colors.muted, marginBottom: 4 },
   uid: { fontSize: 11, color: colors.muted, marginTop: 4 },
-  errorCard: {
-    alignItems: "center",
-    gap: 10,
-    maxWidth: 320,
-    ...layout.card,
-    ...cardShadow,
-  },
-  errorTitle: { fontSize: 17, fontWeight: "700", color: colors.text },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",

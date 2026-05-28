@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { AccessibleField } from "../components/AccessibleField";
 import { ScreenBackground } from "../components/ScreenBackground";
 import { useAuthContext } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -149,8 +150,14 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>
+          <View
+            style={styles.card}
+            accessibilityLabel={isSignUp ? "Criar conta" : "Entrar na conta"}
+          >
+            <Text
+              style={styles.cardTitle}
+              accessibilityRole="header"
+            >
               {isSignUp ? "Criar conta" : "Entrar"}
             </Text>
 
@@ -164,8 +171,12 @@ export default function LoginScreen() {
             ) : null}
 
             {isSignUp ? (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Nome</Text>
+              <AccessibleField
+                label="Nome"
+                hint="Como você quer ser chamado no app"
+                labelStyle={styles.label}
+                containerStyle={styles.inputGroup}
+              >
                 <TextInput
                   style={styles.input}
                   placeholder="Como quer ser chamado?"
@@ -178,11 +189,15 @@ export default function LoginScreen() {
                   textContentType="name"
                   editable={!submitting}
                 />
-              </View>
+              </AccessibleField>
             ) : null}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+            <AccessibleField
+              label="Email"
+              hint="Endereço de email da sua conta"
+              labelStyle={styles.label}
+              containerStyle={styles.inputGroup}
+            >
               <TextInput
                 style={styles.input}
                 placeholder="Digite seu email"
@@ -196,10 +211,18 @@ export default function LoginScreen() {
                 textContentType="emailAddress"
                 editable={!submitting}
               />
-            </View>
+            </AccessibleField>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Senha</Text>
+            <AccessibleField
+              label="Senha"
+              hint={
+                isSignUp
+                  ? "Mínimo de 6 caracteres"
+                  : "Senha da sua conta Mathning"
+              }
+              labelStyle={styles.label}
+              containerStyle={styles.inputGroup}
+            >
               <TextInput
                 style={styles.input}
                 placeholder="Digite sua senha"
@@ -209,20 +232,29 @@ export default function LoginScreen() {
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete={isSignUp ? "password-new" : "password"}
                 textContentType={isSignUp ? "newPassword" : "password"}
                 editable={!submitting}
                 onSubmitEditing={() => void handleSubmit()}
               />
-            </View>
+            </AccessibleField>
 
             {formError ? (
-              <View style={styles.messageError}>
+              <View
+                style={styles.messageError}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="assertive"
+              >
                 <Text style={styles.messageErrorText}>{formError}</Text>
               </View>
             ) : null}
 
             {info ? (
-              <View style={styles.messageInfo}>
+              <View
+                style={styles.messageInfo}
+                accessibilityRole="summary"
+                accessibilityLiveRegion="polite"
+              >
                 <Text style={styles.messageInfoText}>{info}</Text>
               </View>
             ) : null}
@@ -233,6 +265,8 @@ export default function LoginScreen() {
                 onPress={() => void handlePasswordReset()}
                 disabled={submitting}
                 accessibilityRole="button"
+                accessibilityLabel="Esqueci minha senha"
+                accessibilityHint="Envia um email para redefinir sua senha"
               >
                 <Text style={styles.forgotText}>Esqueci minha senha</Text>
               </TouchableOpacity>
@@ -246,6 +280,13 @@ export default function LoginScreen() {
               onPress={() => void handleSubmit()}
               disabled={submitting}
               accessibilityRole="button"
+              accessibilityLabel={isSignUp ? "Criar conta" : "Entrar"}
+              accessibilityHint={
+                isSignUp
+                  ? "Cria sua conta com email e senha"
+                  : "Entra com email e senha informados"
+              }
+              accessibilityState={{ disabled: submitting, busy: submitting }}
             >
               {submitting ? (
                 <ActivityIndicator color="#FFFFFF" />
@@ -255,20 +296,32 @@ export default function LoginScreen() {
                 </Text>
               )}
             </TouchableOpacity>
+          </View>
 
-            {demo ? (
+          {demo ? (
+            <View style={styles.demoSection}>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>ou explore sem conta</Text>
+                <View style={styles.dividerLine} />
+              </View>
               <TouchableOpacity
-                style={styles.demoButton}
+                style={[styles.demoButton, submitting && styles.disabledButton]}
                 onPress={() => void handleContinueDemo()}
                 disabled={submitting}
                 accessibilityRole="button"
+                accessibilityLabel="Continuar em modo demonstração"
+                accessibilityHint="Entra no app sem salvar progresso na nuvem"
               >
                 <Text style={styles.demoButtonText}>
-                  Continuar em demonstracao
+                  Continuar em demonstração
                 </Text>
               </TouchableOpacity>
-            ) : null}
-          </View>
+              <Text style={styles.demoHint}>
+                Ideal para testar o app antes de configurar o Firebase.
+              </Text>
+            </View>
+          ) : null}
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>
@@ -278,6 +331,12 @@ export default function LoginScreen() {
               onPress={toggleMode}
               disabled={submitting}
               accessibilityRole="button"
+              accessibilityLabel={isSignUp ? "Já tenho conta, entrar" : "Criar nova conta"}
+              accessibilityHint={
+                isSignUp
+                  ? "Volta para o formulário de login"
+                  : "Abre o cadastro com nome, email e senha"
+              }
             >
               <Text style={styles.footerLink}>
                 {isSignUp ? " Entrar" : " Criar conta"}
@@ -438,23 +497,46 @@ function createLoginStyles(
     fontWeight: "700",
   },
 
+  demoSection: {
+    gap: 12,
+    marginTop: 4,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.muted,
+  },
   demoButton: {
-    height: 52,
+    minHeight: 52,
     borderWidth: 1,
     borderColor: colors.primary,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 12,
+    paddingHorizontal: 16,
     backgroundColor: colors.card,
   },
-
   demoButtonText: {
     color: colors.primary,
     fontSize: 15,
     fontWeight: "700",
   },
-
+  demoHint: {
+    fontSize: 12,
+    color: colors.muted,
+    textAlign: "center",
+    lineHeight: 18,
+  },
   footer: {
     flexDirection: "row",
     justifyContent: "center",

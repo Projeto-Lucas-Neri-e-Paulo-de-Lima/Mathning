@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { ComponentProps } from "react";
+import { useRef } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   StyleSheet,
   Text,
@@ -9,8 +11,11 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { useReduceMotion } from "../hooks/useReduceMotion";
+import { triggerLightImpact } from "../lib/appHaptics";
 import { useTheme } from "../context/ThemeContext";
 import { radius } from "../theme/radius";
+import { fontFamilies } from "../theme/typography";
 import type { ColorTokens } from "../theme/tokens";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
@@ -34,6 +39,7 @@ type AppButtonProps = {
   style?: StyleProp<ViewStyle>;
   labelStyle?: StyleProp<TextStyle>;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
 };
 
 export function AppButton({
@@ -47,36 +53,59 @@ export function AppButton({
   style,
   labelStyle,
   accessibilityLabel,
+  accessibilityHint,
 }: AppButtonProps) {
   const { colors } = useTheme();
+  const reduceMotion = useReduceMotion();
   const palette = getVariantStyles(colors, variant);
   const isDisabled = disabled || loading;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  function animateScale(value: number) {
+    Animated.spring(scale, {
+      toValue: value,
+      useNativeDriver: true,
+      speed: 55,
+      bounciness: 4,
+    }).start();
+  }
 
   return (
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      style={({ pressed }) => [
-        styles.base,
-        palette.container,
-        pressed && !isDisabled && styles.pressed,
-        isDisabled && styles.disabled,
-        style,
-      ]}
+      onPressIn={() => {
+        if (!isDisabled) {
+          if (!reduceMotion) animateScale(0.97);
+          void triggerLightImpact();
+        }
+      }}
+      onPressOut={() => animateScale(1)}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled: isDisabled }}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
-      {loading ? (
-        <ActivityIndicator color={palette.spinner} />
-      ) : (
-        <>
-          {icon ? (
-            <Ionicons name={icon} size={iconSize} color={palette.text.color} />
-          ) : null}
-          <Text style={[styles.label, palette.text, labelStyle]}>{label}</Text>
-        </>
-      )}
+      <Animated.View
+        style={[
+          styles.base,
+          palette.container,
+          isDisabled && styles.disabled,
+          style,
+          { transform: [{ scale }] },
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={palette.spinner} />
+        ) : (
+          <>
+            {icon ? (
+              <Ionicons name={icon} size={iconSize} color={palette.text.color} />
+            ) : null}
+            <Text style={[styles.label, palette.text, labelStyle]}>{label}</Text>
+          </>
+        )}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -116,7 +145,7 @@ function getVariantStyles(colors: ColorTokens, variant: AppButtonVariant) {
           backgroundColor: colors.card,
           borderColor: "transparent",
         } as ViewStyle,
-        text: { color: colors.primary, fontWeight: "800" } as TextStyle,
+        text: { color: colors.primary, fontFamily: fontFamilies.extraBold } as TextStyle,
         spinner: colors.primary,
       };
     case "outline":
@@ -155,11 +184,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontWeight: "700",
+    fontFamily: fontFamilies.bold,
     fontSize: 16,
-  },
-  pressed: {
-    opacity: 0.88,
   },
   disabled: {
     opacity: 0.55,

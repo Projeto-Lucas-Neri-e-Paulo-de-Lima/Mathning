@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import {
   ScrollView,
   type ScrollViewProps,
@@ -15,25 +16,34 @@ type ScreenScrollViewProps = ScrollViewProps & {
   contentStyle?: StyleProp<ViewStyle>;
 };
 
-export function ScreenScrollView({
-  contentContainerStyle,
-  contentStyle,
-  withBottomNav = false,
-  ...props
-}: ScreenScrollViewProps) {
-  const { layout } = useTheme();
-  const headerInset = useScreenHeaderInset();
-  const bottomNavInset = useBottomNavInset();
+export const ScreenScrollView = forwardRef<ScrollView, ScreenScrollViewProps>(
+  function ScreenScrollView(
+    {
+      contentContainerStyle,
+      contentStyle,
+      withBottomNav = false,
+      ...props
+    },
+    ref,
+  ) {
+    const { layout } = useTheme();
+    const headerInset = useScreenHeaderInset();
+    const bottomNavInset = useBottomNavInset();
 
-  return (
-    <ScrollView
-      {...props}
-      contentContainerStyle={[
-        layout.scroll,
-        { paddingTop: headerInset, paddingBottom: withBottomNav ? bottomNavInset : 32 },
-        contentStyle,
-        contentContainerStyle,
-      ]}
-    />
-  );
-}
+    return (
+      <ScrollView
+        ref={ref}
+        {...props}
+        contentContainerStyle={[
+          layout.scroll,
+          {
+            paddingTop: headerInset,
+            paddingBottom: withBottomNav ? bottomNavInset : 32,
+          },
+          contentStyle,
+          contentContainerStyle,
+        ]}
+      />
+    );
+  },
+);

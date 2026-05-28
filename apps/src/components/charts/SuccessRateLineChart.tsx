@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg";
+import { ChartEmptyPlaceholder } from "./ChartEmptyPlaceholder";
 import { useTheme } from "../../context/ThemeContext";
 import type { ColorTokens } from "../../theme/tokens";
 
@@ -8,6 +9,8 @@ type Props = {
   /** Valores 0–100, um por rótulo */
   points: number[];
   labels: string[];
+  empty?: boolean;
+  emptyMessage?: string;
 };
 
 const SVG_WIDTH = 300;
@@ -20,9 +23,18 @@ const PAD_RIGHT = 12;
 /** Evita que 0% encoste na base e sobreponha os rótulos do eixo X. */
 const Y_FLOOR_RATIO = 0.06;
 
-export function SuccessRateLineChart({ points, labels }: Props) {
+export function SuccessRateLineChart({
+  points,
+  labels,
+  empty = false,
+  emptyMessage = "Pratique exercícios para ver sua evolução de acertos.",
+}: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createSuccessRateLineChartStyles(colors), [colors]);
+
+  if (empty || (points.every((p) => p === 0) && points.length > 0)) {
+    return <ChartEmptyPlaceholder message={emptyMessage} />;
+  }
 
   const chartW = SVG_WIDTH - PAD_LEFT - PAD_RIGHT;
   const chartH = SVG_HEIGHT - PAD_TOP - PAD_BOTTOM;
@@ -46,9 +58,16 @@ export function SuccessRateLineChart({ points, labels }: Props) {
   const poly = coords.map((c) => `${c.x},${c.y}`).join(" ");
   const baselineY = valueToY(0);
 
+  const rateSummary =
+    points.length > 0 ? `Taxa atual ${points[points.length - 1]} por cento` : "";
+
   return (
-    <View style={styles.wrap}>
-      <Svg width={SVG_WIDTH} height={SVG_HEIGHT}>
+    <View
+      style={styles.wrap}
+      accessibilityLabel={`Gráfico de evolução da taxa de acerto. ${rateSummary}`}
+      accessibilityRole="image"
+    >
+      <Svg width={SVG_WIDTH} height={SVG_HEIGHT} accessible={false}>
         {yTicks.map((t) => {
           const y = valueToY(t);
           return (

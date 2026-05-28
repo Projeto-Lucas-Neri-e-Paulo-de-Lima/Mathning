@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { useAuthContext } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { useTrailTabBadge } from "../hooks/useTrailTabBadge";
+import { fontFamilies } from "../theme/typography";
 import type { RootStackParamList } from "../navigation/types";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -53,12 +55,30 @@ export function BottomNav({
   const insets = useSafeAreaInsets();
   const { avatarId } = useAuthContext();
   const { colors, radius } = useTheme();
+  const { show: trailBadge, count: trailOpenCount } = useTrailTabBadge();
   const styles = createStyles(colors, radius);
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {TABS.map((item) => {
         const active = route === item.key;
+        const showTrailDot =
+          item.key === "LearningPath" && trailBadge && !active;
+        const trailA11y =
+          item.key === "LearningPath" && trailOpenCount > 0
+            ? `${item.label}, ${trailOpenCount} ${
+                trailOpenCount === 1 ? "lição em aberto" : "lições em aberto"
+              }`
+            : item.label;
+        const tabHint =
+          item.key === "Dashboard"
+            ? "Ver seu início e progresso"
+            : item.key === "Teoria"
+              ? "Biblioteca de conteúdo para estudar"
+              : item.key === "LearningPath"
+                ? "Ver fases e lições em ordem"
+                : "Configurações da conta e aparência";
+
         return (
           <Pressable
             key={item.key}
@@ -66,7 +86,8 @@ export function BottomNav({
             onPress={() => navigation.navigate(item.key)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={item.label}
+            accessibilityLabel={trailA11y}
+            accessibilityHint={active ? undefined : tabHint}
           >
             {item.kind === "profile" ? (
               <View style={[styles.profileIcon, !active && styles.profileIconInactive]}>
@@ -77,11 +98,28 @@ export function BottomNav({
                 />
               </View>
             ) : (
-              <Ionicons
-                name={active ? item.iconActive : item.icon}
-                size={23}
-                color={active ? colors.navBarActive : colors.navBarInactive}
-              />
+              <View style={styles.iconWrap}>
+                <Ionicons
+                  name={active ? item.iconActive : item.icon}
+                  size={23}
+                  color={active ? colors.navBarActive : colors.navBarInactive}
+                />
+                {showTrailDot ? (
+                  <View
+                    style={[
+                      styles.badge,
+                      trailOpenCount > 1 && styles.badgeWide,
+                    ]}
+                    accessibilityElementsHidden
+                  >
+                    {trailOpenCount > 1 ? (
+                      <Text style={styles.badgeTxt}>
+                        {trailOpenCount > 9 ? "9+" : trailOpenCount}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
             )}
             <Text style={[styles.txt, active && styles.txtActive]} numberOfLines={1}>
               {item.label}
@@ -119,8 +157,10 @@ function createStyles(
     btn: {
       flex: 1,
       minWidth: 0,
+      minHeight: 48,
       paddingVertical: 6,
       alignItems: "center",
+      justifyContent: "center",
       gap: 3,
       borderRadius: radius.sm,
       marginHorizontal: 1,
@@ -134,6 +174,39 @@ function createStyles(
     },
     profileIconInactive: {
       opacity: 0.82,
+    },
+    iconWrap: {
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    badge: {
+      position: "absolute",
+      top: -2,
+      right: -4,
+      minWidth: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.streak,
+      borderWidth: 1.5,
+      borderColor: colors.navBar,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 3,
+    },
+    badgeWide: {
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      top: -4,
+      right: -8,
+    },
+    badgeTxt: {
+      fontFamily: fontFamilies.extraBold,
+      fontSize: 9,
+      color: "#fff",
+      lineHeight: 11,
     },
     txt: {
       fontSize: 10,

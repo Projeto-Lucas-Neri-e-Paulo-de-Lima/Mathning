@@ -28,6 +28,7 @@ export function PracticeFeedbackBanner({
       ]}
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
+      accessibilityLabel={message ? `${title}. ${message}` : title}
     >
       <Ionicons
         name={isOk ? "checkmark-circle" : "close-circle"}

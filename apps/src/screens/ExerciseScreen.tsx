@@ -15,6 +15,7 @@ import {
   getLesson,
   markPracticeCompleted,
   parseUserAnswer,
+  DAILY_GOAL_EXERCISES,
   PRACTICE_QUESTIONS_PER_SESSION,
   recordExerciseOutcome,
   type ArithmeticProblem,
@@ -24,6 +25,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -31,14 +33,25 @@ import {
 } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuthContext } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { AppButton } from "../components/AppButton";
+import { EmptyState } from "../components/EmptyState";
+import { LessonFlowBar } from "../components/LessonFlowBar";
 import { PracticeFeedbackBanner } from "../components/PracticeFeedbackBanner";
+import { PracticeProgressHeader } from "../components/PracticeProgressHeader";
+import { ScreenBackground } from "../components/ScreenBackground";
 import { ScreenScrollView } from "../components/ScreenScrollView";
 import { useAppHeader } from "../hooks/useAppHeader";
+import { useScreenHeaderInset } from "../hooks/useScreenHeaderInset";
 import { useTheme } from "../context/ThemeContext";
 import type { ColorTokens } from "../theme/tokens";
+import { triggerPracticeFeedback, triggerSuccess } from "../lib/appHaptics";
+import {
+  getDailyExerciseCount,
+  projectedDailyAfterSubmit,
+  todayIso,
+} from "../lib/dailyGoal";
 import { markDemoPracticeCompleted, recordDemoExercise } from "../lib/demoProgress";
-import { triggerPracticeFeedback } from "../lib/practiceHaptics";
 import { radius } from "../theme/radius";
 import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
@@ -93,6 +106,9 @@ export function ExerciseScreen() {
     useAuthContext();
 
   useAppHeader(navigation);
+  const headerInset = useScreenHeaderInset();
+  const { showToast } = useToast();
+  const sessionCompleteNotified = useRef(false);
 
   const lesson = getLesson(moduleId, lessonId);
   const completed = progress?.completedLessonIds ?? [];
@@ -132,6 +148,17 @@ export function ExerciseScreen() {
     resetSession();
   }, [moduleId, lessonId, resetSession]);
 
+  useEffect(() => {
+    if (phase !== "summary") {
+      sessionCompleteNotified.current = false;
+      return;
+    }
+    if (sessionCompleteNotified.current) return;
+    sessionCompleteNotified.current = true;
+    showToast({ message: "Sessão de prática concluída!", variant: "success" });
+    void triggerSuccess();
+  }, [phase, showToast]);
+
   async function markSessionComplete() {
     if (!progress) return;
     if (demo) {
@@ -166,13 +193,31 @@ export function ExerciseScreen() {
     const streakAfter = ok ? sessionStreak + 1 : 0;
     const newCorrectCount = ok ? correctCount + 1 : correctCount;
     const isLastQuestion = questionNum >= PRACTICE_QUESTIONS_PER_SESSION;
+    const today = todayIso();
+    const dailyBefore = getDailyExerciseCount(progress, today);
 
     if (demo) {
       const next = recordDemoExercise(progress, ok, streakAfter, lessonId);
       await updateLocalDemo(next);
+      const dailyAfter = getDailyExerciseCount(next, today);
+      if (
+        dailyBefore < DAILY_GOAL_EXERCISES &&
+        dailyAfter >= DAILY_GOAL_EXERCISES
+      ) {
+        showToast({ message: "Meta diária concluída!", variant: "success", duration: 3200 });
+        void triggerSuccess();
+      }
     } else if (db && uid) {
+      const dailyAfter = projectedDailyAfterSubmit(progress, today);
       await recordExerciseOutcome(db, uid, ok, streakAfter, lessonId);
       await refreshProgress();
+      if (
+        dailyBefore < DAILY_GOAL_EXERCISES &&
+        dailyAfter >= DAILY_GOAL_EXERCISES
+      ) {
+        showToast({ message: "Meta diária concluída!", variant: "success", duration: 3200 });
+        void triggerSuccess();
+      }
     }
 
     let nextTier = tier;
@@ -216,11 +261,34 @@ export function ExerciseScreen() {
     }, 1400);
   }
 
-  if (!lesson || !unlocked) {
+  if (!lesson) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.muted}>Não disponível.</Text>
-      </View>
+      <ScreenBackground>
+        <View style={styles.center}>
+          <EmptyState
+            title="Assunto não encontrado"
+            message="Não achamos este conteúdo. Volte e escolha outro assunto na trilha."
+            actionLabel="Voltar"
+            onAction={() => navigation.goBack()}
+            actionVariant="secondary"
+          />
+        </View>
+      </ScreenBackground>
+    );
+  }
+
+  if (!unlocked) {
+    return (
+      <ScreenBackground>
+        <View style={styles.center}>
+          <EmptyState
+            title="Ainda bloqueado"
+            message="Complete os assuntos anteriores na trilha para liberar a prática."
+            actionLabel="Ir para a trilha"
+            onAction={() => navigation.navigate("LearningPath")}
+          />
+        </View>
+      </ScreenBackground>
     );
   }
 
@@ -239,10 +307,26 @@ export function ExerciseScreen() {
 
     return (
       <ScreenScrollView contentStyle={styles.scrollExtra}>
+        <LessonFlowBar
+          navigation={navigation}
+          moduleId={moduleId}
+          lessonId={lessonId}
+          lessonTitle={lesson.title}
+          mode="practice"
+        />
         <Text style={styles.eyebrow}>Prática concluída</Text>
-        <Text style={styles.h1}>{lesson.title}</Text>
-        <View style={styles.card}>
-          <View style={styles.summaryScoreWrap}>
+        <Text style={styles.h1} accessibilityRole="header">
+          {lesson.title}
+        </Text>
+        <View
+          style={styles.card}
+          accessibilityLabel={`Resultado da sessão: ${correctCount} acertos de ${PRACTICE_QUESTIONS_PER_SESSION}, ${pct} por cento. ${message}`}
+        >
+          <View
+            style={styles.summaryScoreWrap}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
             <Text style={styles.summaryScore}>
               {correctCount}/{PRACTICE_QUESTIONS_PER_SESSION}
             </Text>
@@ -250,11 +334,16 @@ export function ExerciseScreen() {
           </View>
           <Text style={styles.summaryPct}>{pct}% de aproveitamento</Text>
           <Text style={styles.summaryMsg}>{message}</Text>
-          <AppButton label="Praticar novamente" onPress={resetSession} />
+          <AppButton
+            label="Praticar novamente"
+            onPress={resetSession}
+            accessibilityHint="Inicia uma nova sessão com cinco questões"
+          />
           <AppButton
             label="Voltar à trilha"
             variant="secondary"
             onPress={() => navigation.goBack()}
+            accessibilityHint="Retorna à lista de assuntos"
           />
         </View>
       </ScreenScrollView>
@@ -263,9 +352,17 @@ export function ExerciseScreen() {
 
   if (!practice) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.muted}>Exercícios não encontrados para este assunto.</Text>
-      </View>
+      <ScreenBackground>
+        <View style={styles.center}>
+          <EmptyState
+            title="Sem exercícios por aqui"
+            message="Este assunto ainda não tem prática. Leia a teoria ou escolha outro tópico."
+            actionLabel="Voltar à trilha"
+            onAction={() => navigation.goBack()}
+            actionVariant="secondary"
+          />
+        </View>
+      </ScreenBackground>
     );
   }
 
@@ -279,27 +376,36 @@ export function ExerciseScreen() {
     feedback === "idle" &&
     (isChoice ? selectedChoice !== null : input.trim() !== "");
 
-  const progressPct = Math.round(
-    (questionNum / PRACTICE_QUESTIONS_PER_SESSION) * 100,
-  );
-
   const explanation =
     practice.mode === "arithmetic"
       ? explainSolution(practice.problem)
       : explainConceptSolution(practice.problem);
 
   return (
-    <ScreenScrollView contentStyle={styles.scrollExtra}>
-      <Text style={styles.eyebrow}>Prática · {lesson.title}</Text>
-      <View style={styles.progressBlock}>
-        <Text style={styles.progress}>
-          Questão {questionNum} de {PRACTICE_QUESTIONS_PER_SESSION}
-        </Text>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
-        </View>
+    <ScreenBackground>
+      <View style={[styles.fixedTop, { paddingTop: headerInset }]}>
+        <LessonFlowBar
+          navigation={navigation}
+          moduleId={moduleId}
+          lessonId={lessonId}
+          lessonTitle={lesson.title}
+          mode="practice"
+        />
+        <PracticeProgressHeader
+          questionNum={questionNum}
+          total={PRACTICE_QUESTIONS_PER_SESSION}
+        />
       </View>
-      <Text style={styles.h1}>
+      <ScrollView
+        style={styles.practiceScroll}
+        contentContainerStyle={styles.scrollExtra}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+      <Text
+        style={styles.h1}
+        accessibilityRole="header"
+      >
         {practice.mode === "concept" ? practice.problem.prompt : "Qual é o resultado?"}
       </Text>
       <View
@@ -308,17 +414,35 @@ export function ExerciseScreen() {
           feedback === "ok" && styles.cardOk,
           feedback === "bad" && styles.cardBad,
         ]}
+        accessibilityLabel="Área da questão"
       >
         {practice.mode === "arithmetic" ? (
-          <Text style={styles.sum}>{formatProblem(practice.problem)}</Text>
+          <Text
+            style={styles.sum}
+            accessibilityLabel={`Conta: ${formatProblem(practice.problem)}`}
+          >
+            {formatProblem(practice.problem)}
+          </Text>
         ) : null}
 
         {choiceProblem ? (
-          <View style={styles.options}>
+          <View
+            style={styles.options}
+            accessibilityRole="radiogroup"
+            accessibilityLabel="Alternativas da questão"
+          >
             {choiceProblem.options.map((opt, i) => {
               const selected = selectedChoice === i;
               const showOk = feedback === "ok" && selected;
               const showBad = feedback === "bad" && selected;
+              const optionHint =
+                feedback === "idle"
+                  ? "Seleciona esta alternativa"
+                  : showOk
+                    ? "Resposta correta"
+                    : showBad
+                      ? "Resposta incorreta"
+                      : undefined;
               return (
                 <Pressable
                   key={i}
@@ -331,6 +455,10 @@ export function ExerciseScreen() {
                     showBad && styles.optionBtnBad,
                     busy && styles.disabled,
                   ]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected, disabled: busy }}
+                  accessibilityLabel={`Opção ${i + 1}: ${opt}`}
+                  accessibilityHint={optionHint}
                 >
                   <Text
                     style={[
@@ -365,6 +493,11 @@ export function ExerciseScreen() {
             placeholder="?"
             placeholderTextColor={colors.muted}
             editable={!busy}
+            accessibilityLabel="Resposta numérica"
+            accessibilityHint="Digite o resultado da conta"
+            accessibilityState={{
+              disabled: busy,
+            }}
           />
         )}
 
@@ -372,6 +505,9 @@ export function ExerciseScreen() {
           label={busy && feedback !== "idle" ? "Aguarde..." : "Verificar"}
           onPress={() => void handleSubmit()}
           disabled={!canSubmit}
+          loading={busy && feedback !== "idle"}
+          accessibilityLabel="Verificar resposta"
+          accessibilityHint="Confere se a sua resposta está correta"
         />
         {feedback === "ok" ? (
           <PracticeFeedbackBanner
@@ -391,13 +527,29 @@ export function ExerciseScreen() {
           Acertos nesta sessão: {correctCount} · Nível {tier}
         </Text>
       </View>
-    </ScreenScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }
 
 function createExerciseStyles(colors: ColorTokens) {
   return StyleSheet.create({
-  scrollExtra: { paddingBottom: 40, backgroundColor: colors.bg, flexGrow: 1 },
+  fixedTop: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    backgroundColor: colors.bg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    zIndex: 2,
+  },
+  practiceScroll: { flex: 1 },
+  scrollExtra: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 40,
+    backgroundColor: colors.bg,
+    flexGrow: 1,
+  },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   eyebrow: {
     fontSize: 11,
@@ -405,24 +557,6 @@ function createExerciseStyles(colors: ColorTokens) {
     letterSpacing: 1,
     color: colors.muted,
     marginBottom: 4,
-  },
-  progressBlock: { marginBottom: 12 },
-  progress: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.primary,
-    marginBottom: 8,
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.border,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
   },
   h1: { fontSize: 20, fontWeight: "700", color: colors.text, marginBottom: 12, lineHeight: 28 },
   card: {

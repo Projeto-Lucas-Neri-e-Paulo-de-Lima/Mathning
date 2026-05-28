@@ -19,14 +19,20 @@ import {
 } from "react-native";
 import { AppButton } from "../components/AppButton";
 import { ConceptTheoryView } from "../components/ConceptTheoryView";
+import { EmptyState } from "../components/EmptyState";
+import { LessonFlowBar } from "../components/LessonFlowBar";
 import { getLessonTopicVisual } from "../constants/lessonIcons";
 import { useAuthContext } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { useAppHeader } from "../hooks/useAppHeader";
+import { triggerError, triggerSuccess } from "../lib/appHaptics";
 import { markDemoLessonDone } from "../lib/demoProgress";
 import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
 import { ScreenBackground } from "../components/ScreenBackground";
-import { ScreenScrollView } from "../components/ScreenScrollView";
+import type { TheorySectionLink } from "../context/TheoryReaderContext";
+import { TheoryReaderShell } from "../components/TheoryReaderShell";
+import { TheorySection } from "../components/TheorySection";
 import { useTheme } from "../context/ThemeContext";
 import { radius } from "../theme/radius";
 import type { ColorTokens } from "../theme/tokens";
@@ -329,6 +335,7 @@ export function TheoryScreen() {
   );
   const { progress, db, uid, demo, updateLocalDemo, refreshProgress } =
     useAuthContext();
+  const { showToast } = useToast();
 
   const lesson = getLesson(moduleId, lessonId);
   const moduleMeta = getModuleById(moduleId);
@@ -377,33 +384,55 @@ export function TheoryScreen() {
 
   async function handleCompleteLesson() {
     if (!progress || !lesson) return;
-    if (demo) {
-      await updateLocalDemo(markDemoLessonDone(progress, lessonId));
-    } else if (db && uid) {
-      await markLessonCompleted(db, uid, lessonId);
-      await refreshProgress();
+    try {
+      if (demo) {
+        await updateLocalDemo(markDemoLessonDone(progress, lessonId));
+      } else if (db && uid) {
+        await markLessonCompleted(db, uid, lessonId);
+        const ok = await refreshProgress();
+        if (!ok) {
+          throw new Error("Não foi possível sincronizar o progresso");
+        }
+      }
+      void triggerSuccess();
+      showToast({ message: "Assunto marcado como concluído", variant: "success" });
+    } catch (e) {
+      void triggerError();
+      showToast({
+        message: e instanceof Error ? e.message : "Não foi possível concluir o assunto",
+        variant: "error",
+      });
     }
   }
 
   if (!lesson) {
     return (
-      <View style={styles.center}>
-        <Text>Conteúdo não encontrado.</Text>
-      </View>
+      <ScreenBackground>
+        <View style={styles.center}>
+          <EmptyState
+            title="Conteúdo não encontrado"
+            message="Este assunto pode ter sido removido ou movido. Volte à lista de teoria."
+            actionLabel="Ver teoria"
+            onAction={() => navigation.navigate("Teoria")}
+            actionVariant="secondary"
+          />
+        </View>
+      </ScreenBackground>
     );
   }
 
   if (!unlocked) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.muted}>Este assunto ainda está bloqueado.</Text>
-        <AppButton
-          label="Voltar"
-          variant="secondary"
-          onPress={() => navigation.goBack()}
-          style={styles.inlineActionBtn}
-        />
-      </View>
+      <ScreenBackground>
+        <View style={styles.center}>
+          <EmptyState
+            title="Assunto bloqueado"
+            message="Avance na trilha e conclua os assuntos anteriores para desbloquear a leitura."
+            actionLabel="Ir para a trilha"
+            onAction={() => navigation.navigate("LearningPath")}
+          />
+        </View>
+      </ScreenBackground>
     );
   }
 
@@ -433,9 +462,32 @@ export function TheoryScreen() {
     );
   }
 
+  const theorySections: TheorySectionLink[] =
+    activeTab === "examples"
+      ? examples.map((ex) => ({
+          id: `ex-${ex.id}`,
+          title: ex.title,
+        }))
+      : [
+          { id: "what", title: "Conceito" },
+          { id: "vocab", title: "Vocabulário" },
+          { id: "rules", title: "Regras" },
+          { id: "practice", title: "Praticar" },
+        ];
+
   return (
-    <ScreenBackground>
-      <ScreenScrollView>
+    <TheoryReaderShell
+      sections={theorySections}
+      header={
+        <LessonFlowBar
+          navigation={navigation}
+          moduleId={moduleId}
+          lessonId={lessonId}
+          lessonTitle={lesson.title}
+          mode="theory"
+        />
+      }
+    >
         <View style={[styles.hero, { backgroundColor: topicVisual.color }]}>
           <View style={styles.heroTitleRow}>
             <Ionicons name={topicVisual.icon} size={20} color="#fff" />
@@ -465,6 +517,7 @@ export function TheoryScreen() {
 
         {activeTab === "concept" ? (
           <>
+            <TheorySection sectionId="what">
             <View style={[styles.card, cardShadow]}>
               <Text style={styles.sectionTitle}>O que é {operationName}?</Text>
               <Text style={styles.body}>{lesson.summary}</Text>
@@ -475,7 +528,9 @@ export function TheoryScreen() {
                 </Text>
               </View>
             </View>
+            </TheorySection>
 
+            <TheorySection sectionId="vocab">
             <View style={[styles.card, cardShadow]}>
               <Text style={styles.sectionTitle}>Vocabulário</Text>
               <Text style={styles.vocabLine}>
@@ -488,7 +543,9 @@ export function TheoryScreen() {
                 <Text style={styles.vocabStrong}>Símbolo:</Text> o sinal usado nesta operação.
               </Text>
             </View>
+            </TheorySection>
 
+            <TheorySection sectionId="rules">
             <View style={[styles.card, cardShadow]}>
               <Text style={styles.sectionTitle}>Regrinhas importantes</Text>
               {ruleNotes.map((rule) => (
@@ -498,11 +555,13 @@ export function TheoryScreen() {
                 </View>
               ))}
             </View>
+            </TheorySection>
           </>
         ) : (
           <>
             {examples.map((example) => (
-              <View key={example.id} style={[styles.card, cardShadow]}>
+              <TheorySection key={example.id} sectionId={`ex-${example.id}`}>
+              <View style={[styles.card, cardShadow]}>
                 <View style={styles.exampleTitleRow}>
                   <View
                     style={[styles.exampleNumberBadge, { backgroundColor: topicVisual.color }]}
@@ -685,10 +744,12 @@ export function TheoryScreen() {
                   <Text style={styles.answerTxt}>Resposta: {example.explanation}</Text>
                 </View>
               </View>
+              </TheorySection>
             ))}
           </>
         )}
 
+        <TheorySection sectionId="practice">
         <View style={[styles.practiceCard, cardShadow]}>
           <Text style={styles.practiceTitle}>Pronto para praticar?</Text>
           <Text style={styles.practiceSub}>
@@ -702,6 +763,7 @@ export function TheoryScreen() {
             accessibilityLabel="Ir para a prática deste assunto"
           />
         </View>
+        </TheorySection>
 
         <View style={[styles.card, cardShadow]}>
           <Text style={styles.small}>
@@ -723,8 +785,7 @@ export function TheoryScreen() {
             />
           )}
         </View>
-      </ScreenScrollView>
-    </ScreenBackground>
+    </TheoryReaderShell>
   );
 }
 
@@ -998,7 +1059,6 @@ function createTheoryStyles(
   practiceTitle: { fontSize: 17, fontWeight: "800", color: colors.text, marginBottom: 8 },
   practiceSub: { fontSize: 14, color: colors.muted, marginBottom: 12 },
   ctaBtn: { marginTop: 0 },
-  inlineActionBtn: { marginTop: 8, alignSelf: "center" },
   small: { fontSize: 13, color: colors.muted, lineHeight: 19 },
   doneRow: {
     flexDirection: "row",

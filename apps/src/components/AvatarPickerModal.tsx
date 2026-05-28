@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { PROFILE_AVATAR_OPTIONS } from "../constants/profileAvatars";
 import { useTheme } from "../context/ThemeContext";
+import { triggerSelection } from "../lib/appHaptics";
 import { radius } from "../theme/radius";
 import type { ColorTokens } from "../theme/tokens";
 
@@ -53,7 +54,10 @@ export function AvatarPickerModal({
                 <Pressable
                   key={opt.id}
                   style={[styles.item, selected && styles.itemSelected]}
-                  onPress={() => onSelect(opt.id)}
+                  onPress={() => {
+                    void triggerSelection();
+                    onSelect(opt.id);
+                  }}
                   accessibilityRole="button"
                   accessibilityLabel={`Avatar ${opt.label}`}
                   accessibilityState={{ selected }}

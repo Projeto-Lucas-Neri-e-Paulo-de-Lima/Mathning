@@ -15,6 +15,7 @@ import LoginScreen from "../screens/LoginScreen";
 import { TheoryHubScreen } from "../screens/TheoryHubScreen";
 import { TheoryScreen } from "../screens/TheoryScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
+import { lessonFlowScreenOptions } from "./lessonFlowOptions";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -64,8 +65,16 @@ function RootStack() {
           <Stack.Screen name="Dashboard" component={DashboardScreen} />
           <Stack.Screen name="Teoria" component={TheoryHubScreen} />
           <Stack.Screen name="LearningPath" component={LearningPathScreen} />
-          <Stack.Screen name="TheoryDetail" component={TheoryScreen} />
-          <Stack.Screen name="Exercise" component={ExerciseScreen} />
+          <Stack.Screen
+            name="TheoryDetail"
+            component={TheoryScreen}
+            options={lessonFlowScreenOptions}
+          />
+          <Stack.Screen
+            name="Exercise"
+            component={ExerciseScreen}
+            options={lessonFlowScreenOptions}
+          />
           <Stack.Screen name="Profile" component={ProfileScreen} />
         </>
       )}

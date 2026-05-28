@@ -74,19 +74,23 @@ export function useAuthAndProgress() {
     return getDb() as Firestore;
   }, [demo]);
 
-  const refreshProgress = useCallback(async () => {
+  const refreshProgress = useCallback(async (): Promise<boolean> => {
     if (demo) {
       setProgress(await loadDemoProgress());
-      return;
+      setError(null);
+      return true;
     }
-    if (!uid || !db) return;
+    if (!uid || !db) return false;
     try {
       await ensureUserProgress(db, uid);
       await touchDailyStreak(db, uid);
       setProgress(await ensureUserProgress(db, uid));
+      setError(null);
+      return true;
     } catch (e) {
       setProgress(null);
       setError(progressErrorMessage(e));
+      return false;
     }
   }, [demo, uid, db]);
 
@@ -228,15 +232,25 @@ export function useAuthAndProgress() {
 
   const updateUserAvatar = useCallback(
     async (avatarId: ProfileAvatarId) => {
-      if (!progress) return;
+      if (!progress) {
+        throw new Error("Progresso indisponível");
+      }
       const next: UserProgressDoc = { ...progress, avatarId };
       if (demo) {
         await updateLocalDemo(next);
         return;
       }
-      if (!uid || !db) return;
-      await setUserAvatar(db, uid, avatarId);
-      setProgress(next);
+      if (!uid || !db) {
+        throw new Error("Conta não conectada");
+      }
+      try {
+        await setUserAvatar(db, uid, avatarId);
+        setProgress(next);
+      } catch (e) {
+        throw new Error(
+          e instanceof Error ? e.message : "Não foi possível salvar o avatar",
+        );
+      }
     },
     [progress, demo, uid, db, updateLocalDemo],
   );

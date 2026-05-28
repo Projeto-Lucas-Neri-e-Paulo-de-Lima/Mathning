@@ -1,15 +1,16 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { MODULES } from "@mathning/shared";
+import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { AppCard } from "../components/AppCard";
+import { HubListSkeleton } from "../components/skeleton/HubListSkeleton";
 import { BottomNav } from "../components/BottomNav";
 import { ScreenScrollView } from "../components/ScreenScrollView";
 import { ScreenBackground } from "../components/ScreenBackground";
@@ -21,6 +22,8 @@ import { isLessonUnlocked } from "../lib/progression";
 import type { RootStackParamList } from "../navigation/types";
 import { radius } from "../theme/radius";
 import type { ColorTokens } from "../theme/tokens";
+import type { ThemeLayout } from "../theme/ui";
+import { fontFamilies } from "../theme/typography";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,8 +32,8 @@ export function LearningPathScreen() {
   useAppHeader(navigation);
   const { colors, layout, cardShadow } = useTheme();
   const styles = useMemo(
-    () => createLearningPathStyles(colors, cardShadow),
-    [colors, cardShadow],
+    () => createLearningPathStyles(colors, layout, cardShadow),
+    [colors, layout, cardShadow],
   );
   const { progress, loading } = useAuthContext();
   const completed = progress?.completedLessonIds ?? [];
@@ -38,23 +41,45 @@ export function LearningPathScreen() {
 
   if (loading || !progress) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <>
+        <HubListSkeleton />
+        <BottomNav navigation={navigation} route="LearningPath" />
+      </>
     );
   }
 
   const activeModules = MODULES.filter((m) => m.available);
+  const lessonCount = activeModules.reduce((acc, m) => acc + m.lessons.length, 0);
 
   return (
     <ScreenBackground>
       <ScreenScrollView withBottomNav>
-        <View style={styles.pageIntro}>
-          <Text style={layout.pageTitle}>Trilha de aprendizado</Text>
-          <Text style={layout.pageSub}>
-            Avance em ordem: cada lição libera a próxima. Toque no assunto para a teoria ou use
-            &quot;Pratique&quot; para exercícios.
-          </Text>
+        <View style={styles.heroBanner}>
+          <View style={[layout.heroBlob, { top: -24, right: -16 }]} />
+          <View style={styles.heroTop}>
+            <View style={styles.heroIconWrap}>
+              <Ionicons name="map" size={24} color={colors.textOnPrimary} />
+            </View>
+            <View style={styles.heroTextWrap}>
+              <Text style={styles.heroTitle}>Sua trilha</Text>
+              <Text style={styles.heroSub}>
+                Avance em ordem: cada lição libera a próxima. Toque no assunto para a teoria ou use
+                &quot;Pratique&quot; para exercícios.
+              </Text>
+            </View>
+          </View>
+          <View style={styles.heroMetaRow}>
+            <View style={styles.heroMetaPill}>
+              <Ionicons name="layers-outline" size={14} color={colors.textOnPrimary} />
+              <Text style={styles.heroMetaTxt}>{activeModules.length} fases</Text>
+            </View>
+            <View style={styles.heroMetaPill}>
+              <Ionicons name="checkmark-circle-outline" size={14} color={colors.textOnPrimary} />
+              <Text style={styles.heroMetaTxt}>
+                {completed.length} de {lessonCount} concluídas
+              </Text>
+            </View>
+          </View>
         </View>
 
         {activeModules.map((mod, phaseIdx) => {
@@ -142,6 +167,7 @@ export function LearningPathScreen() {
                     {open ? (
                       <Pressable
                         onPress={goPractice}
+                        accessibilityHint="Abre os exercícios deste assunto"
                         style={({ pressed }) => [
                           hasPracticed ? styles.pratiqueBtnAgain : styles.pratiqueBtn,
                           pressed && { opacity: 0.9 },
@@ -176,11 +202,52 @@ export function LearningPathScreen() {
 
 function createLearningPathStyles(
   colors: ColorTokens,
+  layout: ThemeLayout,
   cardShadow: ReturnType<typeof import("../theme/ui").createCardShadow>,
 ) {
   return StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  pageIntro: { marginBottom: 4 },
+  heroBanner: {
+    ...layout.heroBanner,
+    marginBottom: 4,
+  },
+  heroTop: { flexDirection: "row", alignItems: "flex-start", gap: 12, zIndex: 1 },
+  heroIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroTextWrap: { flex: 1 },
+  heroTitle: {
+    fontFamily: fontFamilies.extraBold,
+    fontSize: 22,
+    color: colors.textOnPrimary,
+    marginBottom: 4,
+  },
+  heroSub: {
+    fontFamily: fontFamilies.regular,
+    color: colors.mutedOnPrimary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  heroMetaRow: { marginTop: 14, flexDirection: "row", gap: 8, flexWrap: "wrap", zIndex: 1 },
+  heroMetaPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  heroMetaTxt: {
+    fontFamily: fontFamilies.bold,
+    fontSize: 12,
+    color: colors.textOnPrimary,
+  },
   phaseCard: { marginBottom: 8 },
   phaseTop: { flexDirection: "row", gap: 14 },
   phaseBadge: {
@@ -262,8 +329,12 @@ function createLearningPathStyles(
   lessonTitleOff: { color: colors.muted },
   pratiqueBtn: {
     flexShrink: 0,
+    minHeight: 44,
+    minWidth: 44,
     paddingVertical: 10,
     paddingHorizontal: 14,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.primary,
     borderRadius: 10,
   },
@@ -274,8 +345,12 @@ function createLearningPathStyles(
   },
   pratiqueBtnAgain: {
     flexShrink: 0,
+    minHeight: 44,
+    minWidth: 44,
     paddingVertical: 10,
     paddingHorizontal: 12,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: colors.card,
     borderRadius: 10,
     borderWidth: 1,

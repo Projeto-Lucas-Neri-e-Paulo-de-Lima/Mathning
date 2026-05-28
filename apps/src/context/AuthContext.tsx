@@ -17,7 +17,7 @@ export interface AuthContextValue {
   resetPassword: (email: string) => Promise<void>;
   signOutUser: () => Promise<void>;
   continueDemo: () => Promise<void>;
-  refreshProgress: () => Promise<void>;
+  refreshProgress: () => Promise<boolean>;
   updateLocalDemo: (next: UserProgressDoc) => Promise<void>;
   updateUserAvatar: (avatarId: ProfileAvatarId) => Promise<void>;
   db: Firestore | null;
